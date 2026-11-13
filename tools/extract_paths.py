@@ -5,8 +5,14 @@ def cols(pg):
     W=pg.width; return [(0,W/2),(W/2,W)]
 def lines_of(pg, x0, x1):
     ws=[w for w in pg.extract_words(extra_attrs=["fontname","size"],keep_blank_chars=False) if x0<=w['x0']<x1 and 40<w['top']<740]
-    ws.sort(key=lambda w:(round(w['top']/3),w['x0']))
-    return ws
+    ws.sort(key=lambda w:w['top'])
+    out=[];grp=[];ref=None
+    for w in ws:
+        if ref is None or abs(w['top']-ref)>3.2:
+            out+=sorted(grp,key=lambda x:x['x0']);grp=[];ref=w['top']
+        grp.append(w)
+    out+=sorted(grp,key=lambda x:x['x0'])
+    return out
 def kind(w):
     fn=w['fontname']
     if 'PoisonHope' in fn: return 'H'

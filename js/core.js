@@ -118,7 +118,7 @@ window.SDL = window.SDL || {};
     nova() {
       return { id: S.uid(), v: 1, criado: Date.now(), atualizado: Date.now(), nome: "", descricao: "", retrato: "", nivel: 1, anc: "", ancEsc: {}, ajuste: { mais: "", menos: "" },
         trilhas: { novato: "", especialista: "", mestre: "" }, picks: {}, escolhas: {}, profissoes: [], talentosExtra: [], armas: [], armadura: "", escudo: "",
-        equip: [], dinheiro: { co: 0, xp: 0, cc: 0 }, magias: [], tradicoes: [], dano: 0, insanidade: 0, corrupcao: 0, aflicoes: [], bonus: {}, notas: "", usados: {} };
+        equip: [], dinheiro: { co: 0, xp: 0, cc: 0 }, magias: [], tradicoes: [], talEsc: {}, religiao: "", conj: {}, notasTal: {}, dano: 0, insanidade: 0, corrupcao: 0, aflicoes: [], bonus: {}, notas: "", usados: {} };
     },
     exportar(fichas, nome) {
       const blob = new Blob([JSON.stringify({ app: "sdl-ficha", versao: 1, fichas }, null, 1)], { type: "application/json" });
@@ -136,14 +136,16 @@ window.SDL = window.SDL || {};
   S.calcular = function (c) {
     const anc = S.byId(S.ancestralidades, c.anc);
     const nivel = +c.nivel || 0;
-    const r = { anc, nivel, atrs: {}, car: { vida: 0, defesa: 0, percepcao: 0, velocidade: 0, poder: 0, cura: 0, tamanho: 0, corrupcao: 0, insanidade: 0 }, ben: [], tal: [], pend: [], idiomas: [] };
+    const TE = { "Talento Sagaz": ["sagaz", 1], "Talentos Gatunos": ["gatuno", 2], "Talento Gatuno": ["gatuno", 1], "Talento de Lutador": ["lutador", 1] };
+    let poderExtra = 0, sagazMagia = 0; const grants = [];
+    const r = { escolhasTal: [], feitAuto: [], anc, nivel, atrs: {}, car: { vida: 0, defesa: 0, percepcao: 0, velocidade: 0, poder: 0, cura: 0, tamanho: 0, corrupcao: 0, insanidade: 0 }, ben: [], tal: [], pend: [], idiomas: [] };
     const ben = [];
     const trilhaDe = (tier) => S.byId(S.trilhas, c.trilhas[tier]);
     for (const tier of ["novato", "especialista", "mestre"]) {
       const t = trilhaDe(tier); if (!t) continue;
       for (const k of Object.keys(t.niv).map(Number).sort((a, b) => a - b)) {
         if (k > nivel) continue;
-        const lv = t.niv[k]; ben.push({ chave: t.id + ":" + k, fonte: `${t.nome} — nível ${k}`, trilha: t, nivel: k, esc: lv.esc, car: lv.car, idi: lv.idi, tal: lv.tal });
+        const lv = t.niv[k]; ben.push({ chave: t.id + ":" + k, fonte: `${t.nome} — nível ${k}`, trilha: t, nivel: k, esc: lv.esc, car: lv.car, idi: lv.idi, tal: lv.tal, mag: lv.mag, feit: lv.feit });
       }
     }
     if (anc && nivel >= 4) {
@@ -161,7 +163,22 @@ window.SDL = window.SDL || {};
       if (b.esc > p.length) r.pend.push({ chave: b.chave, falta: b.esc - p.length, fonte: b.fonte });
       for (const [k, v] of Object.entries(b.car || {})) r.car[k] += v;
       if (b.idi) r.idiomas.push({ fonte: b.fonte, texto: b.idi });
-      (b.tal || []).forEach((t) => r.tal.push({ ...t, fonte: b.fonte }));
+      (b.tal || []).forEach((t) => {
+        const te = TE[t.n];
+        if (te) {
+          const chave = b.chave + ":" + t.n, esc = c.talEsc[chave] || [], falta = te[1] - esc.length;
+          if (falta > 0) r.pend.push({ chave, falta, fonte: b.fonte + " — " + t.n, talento: te[0], max: te[1] });
+          r.escolhasTal.push({ chave, kind: te[0], max: te[1], nome: t.n, fonte: b.fonte });
+          esc.slice(0, te[1]).forEach((nm) => {
+            const op = (S.talentosEscolha[te[0]] || []).find((o) => o.n === nm); if (!op) return;
+            r.tal.push({ n: nm, t: op.t, fonte: b.fonte + " — " + t.n });
+            if (te[0] === "sagaz" && nm === "Magia") { poderExtra += 1; sagazMagia++; grants.push(sagazMagia === 1 ? { obrig: 1, esc: 2, fonte: "Talento Sagaz: Magia" } : { esc: 1, fonte: "Talento Sagaz: Magia (2ª vez)" }); }
+          });
+        } else r.tal.push({ ...t, fonte: b.fonte });
+      });
+      if (b.mag) grants.push({ ...b.mag, fonte: b.fonte });
+      if (b.feit) r.feitAuto.push(b.feit);
+      if (b.chave === "anc:4" && (c.escolhas["anc:4"] || "talento") === "feitico") grants.push({ esc: 1, solo: true, fonte: b.fonte });
     }
     if (anc && anc.escolhaAtributo && !c.ancEsc.atributo) r.pend.push({ chave: "anc:attr", falta: 1, fonte: anc.nome + " (+1 em um atributo)" });
     for (const [k] of S.ATR) { const v = base[k] + (c.bonus[k] || 0); r.atrs[k] = { v, m: v - 10 }; }
@@ -182,10 +199,19 @@ window.SDL = window.SDL || {};
     r.velocidade = (anc ? anc.velocidade : 10) + K.velocidade + (B.velocidade || 0);
     const tam = anc ? (c.ancEsc.tamanho || anc.tamanho[anc.tamanho.length - 1]) : "1";
     r.tamanho = tam;
-    r.poder = K.poder + (B.poder || 0);
+    r.poder = K.poder + poderExtra + (B.poder || 0);
     r.insanidade = +c.insanidade || 0; r.corrupcao = +c.corrupcao || 0;
     r.dano = Math.min(+c.dano || 0, r.vida);
     r.estado = r.dano >= r.vida ? "incapacitado" : r.dano >= r.vida / 2 ? "ferido" : "";
+    // magia
+    const obrig = grants.reduce((a, g) => a + (g.obrig || 0), 0), escT = grants.reduce((a, g) => a + (g.esc || 0), 0), escNS = grants.reduce((a, g) => a + (g.solo ? 0 : g.esc || 0), 0);
+    const mg = c.magias || [], truque = c.trilhas.novato === "magista" && nivel >= 1;
+    r.mag = { grants, total: obrig + escT, maxTrad: obrig + escNS, usado: c.tradicoes.length + mg.filter((m) => !m.livre).length, truque, livresUsados: mg.filter((m) => m.livre).length, livres: truque ? c.tradicoes.length : 0 };
+    if (r.mag.total > r.mag.usado) r.pend.push({ chave: "magia", falta: r.mag.total - r.mag.usado, fonte: "Magia (tradições e feitiços)", magia: true });
+    r.feiticos = mg.map((m) => ({ ...(m.id ? (S.feiticos.find((x) => x.id === m.id) || {}) : m), uid: m.uid, livre: m.livre })).filter((x) => x.nome);
+    r.feitAuto.forEach((id) => { const f2 = S.feiticosTrilha.find((x) => x.id === id); if (f2 && !r.feiticos.some((x) => x.id === id)) r.feiticos.push({ ...f2, uid: "auto-" + id, auto: true }); });
+    r.casts = (grau) => (grau <= r.poder ? (S.conjuracoes[Math.min(r.poder, 10)] || [])[grau] || 0 : 0);
+    r.atrTrad = (t) => { const i = S.tradicoesInfo.find((x) => x.nome === t); return i ? i.atr : "intelecto"; };
     r.mod = (k) => (k === "percepcao" ? r.percepcao - 10 : A[k] ? A[k].m : 0);
     return r;
   };

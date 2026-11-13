@@ -115,3 +115,5 @@ button.card-op:hover,.card-op.sel{border-color:var(--verm)}.card-op.sel{box-shad
 .toast{background:var(--verm);color:#fff;padding:.5rem 1rem;border-radius:6px;box-shadow:var(--sombra);transition:opacity .4s}.toast.sai{opacity:0}
 @media print{.barra,.rodape-ficha{display:none}.ficha{box-shadow:none}[data-tema=escuro] .stats::before{filter:none}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.texto-feit{white-space:pre-line}.mag-sum ul{margin:.3rem 0;padding-left:1.2rem;color:var(--tinta2);font-size:.9rem}.linha-rel{display:flex;gap:.5rem;align-items:center}.pips{color:var(--verm);letter-spacing:.1em;white-space:nowrap}.lista-mag li{align-items:center}.op-tal summary{cursor:pointer;margin:.2rem 0}.op-tal .peq{font-size:.9rem;margin:.2rem 0 .6rem}.lista-cat{max-height:55vh;overflow:auto}

@@ -23,23 +23,40 @@
       r.tipo === "d20" && r.falha ? h("div", { class: "res-nota" }, "1 natural") : null);
   }
 
-  /* efeitos de talentos aplicáveis */
+  /* efeitos de talentos aplicáveis: tabela manual (SDL.efeitos) + inferência a partir do texto oficial */
+  const NUMP = { um: 1, uma: 1, dois: 2, duas: 2 }, ATRN = { "força": "forca", agilidade: "agilidade", intelecto: "intelecto", vontade: "vontade", "percepção": "percepcao" };
+  const cacheEf = new Map();
+  function inferir(t) {
+    const out = [];
+    for (const s of (t.t || "").split(/(?<=[.!?])\s+/)) {
+      if (/contra você|ataques? contra|rolagens? de ataque contra/i.test(s) && !/seus ataques/i.test(s)) continue;
+      const dg = /(\d)\s*d[áa]divas?|\b(uma|duas)\s+d[áa]divas?/i.exec(s); const dad = dg ? +dg[1] || NUMP[dg[2].toLowerCase()] : 0;
+      if (dad && /rolagens? de desafio/i.test(s)) { const a = /desafio de (Força|Agilidade|Intelecto|Vontade|Percepção)/i.exec(s); out.push({ quando: "desafio", dadivas: dad, attr: a ? ATRN[a[1].toLowerCase()] : undefined, auto: false, rotulo: t.n }); }
+      else if (dad && /ataque/i.test(s) && !/rev[ée]s/i.test(s)) out.push({ quando: "ataque", dadivas: dad, auto: false, rotulo: t.n });
+      const ex = /(\d+d\d+)\s+de\s+dano\s+extra|dano extra (?:de )?(\d+d\d+)/i.exec(s); if (ex) out.push({ quando: "dano-arma", extra: ex[1] || ex[2], auto: false, rotulo: t.n });
+      else if (/dano extra igual ao seu Poder/i.test(s)) out.push({ quando: "dano-arma", extra: "@poder", auto: false, rotulo: t.n });
+    }
+    const vistos = new Set(); return out.filter((e) => { const k = e.quando + e.attr + e.extra + e.dadivas; if (vistos.has(k)) return false; vistos.add(k); return true; });
+  }
+  S.efeitosDe = (t) => { if (S.efeitos[t.n]) return S.efeitos[t.n]; const k = t.n + "|" + (t.t || "").length; if (!cacheEf.has(k)) cacheEf.set(k, inferir(t)); return cacheEf.get(k); };
   function efeitosAtivos(calc, quando, attr) {
     const lista = [];
-    for (const t of calc.tal) for (const e of (S.efeitos[t.n] || [])) {
+    for (const t of calc.tal) for (const e of S.efeitosDe(t)) {
       if (e.quando !== quando) continue; if (e.attr && attr && e.attr !== attr) continue;
-      lista.push({ ...e, talento: t.n });
+      lista.push({ ...e, talento: t.n, texto: t.t });
     }
     return lista;
   }
 
   /* Janela de rolagem contextual */
-  S.rolarContexto = function ({ calc, titulo, tipo, attr, arma, alvo, mod }) {
+  S.rolarContexto = function ({ calc, titulo, tipo, attr, arma, alvo, mod, feitico }) {
     const nomeMod = attr ? S.ATR_NOME[attr] || (attr === "percepcao" ? "Percepção" : attr) : "";
     let modBase = mod != null ? mod : attr ? calc.mod(attr) : 0;
     const quandoAtq = tipo === "ataque" ? (arma ? "ataque-arma" : "ataque") : "desafio";
     const efs = efeitosAtivos(calc, quandoAtq, attr).concat(tipo === "ataque" ? efeitosAtivos(calc, "ataque", attr).filter((e) => quandoAtq !== "ataque") : []);
-    const dmgEfs = tipo === "ataque" && arma ? efeitosAtivos(calc, "dano-arma") : [];
+    const dmgEfs = tipo === "ataque" && (arma || feitico) ? efeitosAtivos(calc, "dano-arma") : [];
+    const danoFeit = feitico ? ((/(\d+d\d+(?:\s*\+\s*\d+)?)\s+de\s+dano/i.exec(feitico.texto) || [])[1] || "") : "";
+    const arma0 = arma || (danoFeit ? { nome: feitico.nome, dano: danoFeit } : null);
     const marcados = new Set(); const autoDad = efs.filter((e) => e.auto).reduce((a, e) => a + (e.dadivas || 0), 0);
     const cDad = contador("Dádivas", 0, 0, 9), cRev = contador("Reveses", 0, 0, 9);
     const inBonus = h("input", { type: "number", value: 0, class: "num", "aria-label": "Bônus extra" });
@@ -47,7 +64,7 @@
     const saida = h("div", { class: "saida", "aria-live": "polite" });
     const toggles = efs.filter((e) => !e.auto).concat(dmgEfs.filter((e) => !e.auto)).map((e, i) => {
       const id = "ef" + i; e._id = id;
-      return h("label", { class: "check" }, h("input", { type: "checkbox", onchange: (ev) => (ev.target.checked ? marcados.add(id) : marcados.delete(id)) }), e.rotulo || e.talento);
+      return h("label", { class: "check", title: e.texto || "" }, h("input", { type: "checkbox", onchange: (ev) => (ev.target.checked ? marcados.add(id) : marcados.delete(id)) }), e.rotulo || e.talento);
     });
     const autos = efs.filter((e) => e.auto).concat(dmgEfs.filter((e) => e.auto)).map((e) => h("li", {}, `${e.talento}: ${e.dadivas ? e.dadivas + " dádiva" : ""}${e.extra ? "+" + e.extra + " dano" : ""}`));
     let ultimo = null;
@@ -58,14 +75,15 @@
       const r = S.dados.d20({ mod: modBase + (+inBonus.value || 0), dadivas: dad, reveses: cRev.get(), alvo: inAlvo.value === "" ? null : +inAlvo.value, rotulo: titulo });
       r.extraAtq = ext; ultimo = r; S.registrar(r);
       saida.replaceChildren(resultado(r));
-      if (tipo === "ataque" && arma) saida.append(h("button", { class: "btn primario", onclick: rolarDano }, "Rolar dano"));
+      if (tipo === "ataque" && arma0) saida.append(h("button", { class: "btn primario", onclick: rolarDano }, "Rolar dano"));
     };
     const rolarDano = () => {
-      let partes = [arma.dano.replace(/\s/g, "")]; const nomes = [];
-      for (const e of dmgEfs) if (e.extra && (e.auto || marcados.has(e._id))) { partes.push(e.extra); nomes.push(e.talento); }
-      for (const e of efs) if (!e.auto && marcados.has(e._id) && e.extra && e.quando.startsWith("ataque")) { partes.push(e.extra); nomes.push(e.talento); }
+      let partes = [arma0.dano.replace(/\s/g, "")]; const nomes = [];
+      const ex1 = (e) => (e.extra === "@poder" ? String(calc.poder || 0) : e.extra);
+      for (const e of dmgEfs) if (e.extra && (e.auto || marcados.has(e._id))) { partes.push(ex1(e)); nomes.push(e.talento); }
+      for (const e of efs) if (!e.auto && marcados.has(e._id) && e.extra && e.quando.startsWith("ataque")) { partes.push(ex1(e)); nomes.push(e.talento); }
       const ex = S.dados.expr(partes.join("+")); if (!ex) return;
-      const r = { tipo: "expr", rotulo: "Dano — " + arma.nome, total: ex.total, det: ex.det, quando: Date.now() }; S.registrar(r);
+      const r = { tipo: "expr", rotulo: "Dano — " + arma0.nome, total: ex.total, det: ex.det, quando: Date.now() }; S.registrar(r);
       saida.append(h("div", { class: "dano-res" }, resultado(r), nomes.length ? h("small", {}, "Inclui: " + nomes.join(", ")) : null));
     };
     const corpo = h("div", { class: "rolagem" },
