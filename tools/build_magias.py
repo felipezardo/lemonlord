@@ -8,7 +8,7 @@ INT=["Adivinhação","Arcana","Batalha","Conjuração","Encantamento","Ilusão",
 TREVAS=["Maldição","Necromancia","Proibida"]
 trads=sorted({s["trad"] for s in sp})
 info=[{"nome":t,"atr":"intelecto" if t in INT else "vontade","trevas":t in TREVAS} for t in trads]
-def clean(s): return re.sub(r"\s+"," ",s).replace(" \n","\n").strip()
+def clean(s): return re.sub(r"(:\s*){2,}",": ",re.sub(r"\s+"," ",s).replace(" \n","\n")).strip()
 fe=[];seen=set()
 for s in sp:
     i=slug(s["trad"]+"-"+s["nome"]); 

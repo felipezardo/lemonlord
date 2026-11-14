@@ -12,7 +12,7 @@ def run(pages):
             if cur: spells.append(cur)
             cur={"nome":m.group(1).strip().title().replace(" De "," de ").replace(" Da "," da ").replace(" Do "," do ").replace(" Dos "," dos ").replace(" Das "," das ").replace(" E "," e ").replace(" Em "," em ").replace(" Para "," para ").replace(" A "," a ").replace(" O "," o "),"tipo":m.group(2).capitalize().replace("Utilitário","Utilitário"),"trad":m.group(3).strip().title(),"grau":int(m.group(4)),"campo":re.sub(r"[:\s]+$","",m.group(5) or ""),"pag":pn,"texto":(re.sub(r"[:\s]+$","",m.group(5))+": ") if m.group(5) else "","secao":trad}
         elif cur is not None:
-            if k=='B' and re.match(r"^(Duração|Alvo|Área|Requisito|Gatilho|Ação|Efeito)\b",t): cur["texto"]+=("\n" if cur["texto"] else "")+t+": "
+            if k=='B' and re.match(r"^(Duração|Alvo|Área|Requisitos?|Gatilho|Ação|Efeito|Rolagem de Ataque 20\+|Sacrifício|Permanência|Desencadeada|Concentração)",t): cur["texto"]+=("\n" if cur["texto"] else "")+t+": "
             else: cur["texto"]+=("" if cur["texto"].endswith(": ") or not cur["texto"] else " ")+t
     if cur: spells.append(cur)
     return spells

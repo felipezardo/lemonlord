@@ -31,8 +31,9 @@
     for (const s of (t.t || "").split(/(?<=[.!?])\s+/)) {
       if (/contra você|ataques? contra|rolagens? de ataque contra/i.test(s) && !/seus ataques/i.test(s)) continue;
       const dg = /(\d)\s*d[áa]divas?|\b(uma|duas)\s+d[áa]divas?/i.exec(s); const dad = dg ? +dg[1] || NUMP[dg[2].toLowerCase()] : 0;
-      if (dad && /rolagens? de desafio/i.test(s)) { const a = /desafio de (Força|Agilidade|Intelecto|Vontade|Percepção)/i.exec(s); out.push({ quando: "desafio", dadivas: dad, attr: a ? ATRN[a[1].toLowerCase()] : undefined, auto: false, rotulo: t.n }); }
-      else if (dad && /ataque/i.test(s) && !/rev[ée]s/i.test(s)) out.push({ quando: "ataque", dadivas: dad, auto: false, rotulo: t.n });
+      const temExtra = /dano extra/i.test(s); /* dádiva citada junto de dano extra é condição, não bônus */
+      if (dad && !temExtra && /rolagens? de desafio/i.test(s)) { const a = /desafio de (Força|Agilidade|Intelecto|Vontade|Percepção)/i.exec(s); out.push({ quando: "desafio", dadivas: dad, attr: a ? ATRN[a[1].toLowerCase()] : undefined, auto: false, rotulo: t.n }); }
+      else if (dad && !temExtra && /ataque/i.test(s) && !/rev[ée]s/i.test(s)) out.push({ quando: "ataque", dadivas: dad, auto: false, rotulo: t.n });
       const ex = /(\d+d\d+)\s+de\s+dano\s+extra|dano extra (?:de )?(\d+d\d+)/i.exec(s); if (ex) out.push({ quando: "dano-arma", extra: ex[1] || ex[2], auto: false, rotulo: t.n });
       else if (/dano extra igual ao seu Poder/i.test(s)) out.push({ quando: "dano-arma", extra: "@poder", auto: false, rotulo: t.n });
     }
@@ -43,7 +44,7 @@
     const lista = [];
     for (const t of calc.tal) for (const e of S.efeitosDe(t)) {
       if (e.quando !== quando) continue; if (e.attr && attr && e.attr !== attr) continue;
-      lista.push({ ...e, talento: t.n, texto: t.t });
+      lista.push({ ...e, auto: e.auto || !!(calc.efAtivos || {})[t.n], talento: t.n, texto: t.t });
     }
     return lista;
   }
@@ -59,6 +60,9 @@
     const arma0 = arma || (danoFeit ? { nome: feitico.nome, dano: danoFeit } : null);
     const marcados = new Set(); const autoDad = efs.filter((e) => e.auto).reduce((a, e) => a + (e.dadivas || 0), 0);
     const cDad = contador("Dádivas", 0, 0, 9), cRev = contador("Reveses", 0, 0, 9);
+    const autoRev = []; if (calc.armInsuf && (attr === "forca" || attr === "agilidade")) autoRev.push("Armadura: Força insuficiente (1 revés em rolagens de Força e Agilidade)");
+    if (tipo === "ataque" && arma && !calc.reqArma(arma)) autoRev.push("Arma: requisito de Força/Agilidade não cumprido (1 revés)");
+    if (tipo === "ataque" && arma && /Incômoda/.test(arma.prop || "")) autoRev.push("Arma incômoda (1 revés)");
     const inBonus = h("input", { type: "number", value: 0, class: "num", "aria-label": "Bônus extra" });
     const inAlvo = h("input", { type: "number", value: alvo != null ? alvo : tipo === "desafio" ? 10 : "", class: "num", placeholder: "—", "aria-label": "Número-alvo" });
     const saida = h("div", { class: "saida", "aria-live": "polite" });
@@ -66,13 +70,13 @@
       const id = "ef" + i; e._id = id;
       return h("label", { class: "check", title: e.texto || "" }, h("input", { type: "checkbox", onchange: (ev) => (ev.target.checked ? marcados.add(id) : marcados.delete(id)) }), e.rotulo || e.talento);
     });
-    const autos = efs.filter((e) => e.auto).concat(dmgEfs.filter((e) => e.auto)).map((e) => h("li", {}, `${e.talento}: ${e.dadivas ? e.dadivas + " dádiva" : ""}${e.extra ? "+" + e.extra + " dano" : ""}`));
+    const autos = autoRev.map((t) => h("li", {}, t)).concat(efs.filter((e) => e.auto).concat(dmgEfs.filter((e) => e.auto)).map((e) => h("li", {}, `${e.talento}: ${e.dadivas ? e.dadivas + " dádiva" : ""}${e.extra ? "+" + e.extra + " dano" : ""}`)));
     let ultimo = null;
 
     const rolarAtq = () => {
       let dad = cDad.get() + autoDad, ext = [];
       for (const e of efs) if (!e.auto && marcados.has(e._id)) { dad += e.dadivas || 0; if (e.extra) ext.push(e.extra); }
-      const r = S.dados.d20({ mod: modBase + (+inBonus.value || 0), dadivas: dad, reveses: cRev.get(), alvo: inAlvo.value === "" ? null : +inAlvo.value, rotulo: titulo });
+      const r = S.dados.d20({ mod: modBase + (+inBonus.value || 0), dadivas: dad, reveses: cRev.get() + autoRev.length, alvo: inAlvo.value === "" ? null : +inAlvo.value, rotulo: titulo });
       r.extraAtq = ext; ultimo = r; S.registrar(r);
       saida.replaceChildren(resultado(r));
       if (tipo === "ataque" && arma0) saida.append(h("button", { class: "btn primario", onclick: rolarDano }, "Rolar dano"));

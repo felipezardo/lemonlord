@@ -33,8 +33,15 @@ for t,ps in d.items():
         niv={}
         for k,v in p["niveis"].items():
             cx=v["caracteristicas"] or ""; at=v["atributos"] or ""; tal=[]; mg=None
-            for x in v["talentos"]:
+            lista=v["talentos"]; stat=None
+            for x in lista:
                 nm=x["nome"]
+                if re.match(r"^EIDOLON",nm): stat=[nm+" "+x["texto"]]; continue
+                if stat is not None:
+                    if nm in("Defesa","Vida","Força","Agilidade","Intelecto","Vontade","Velocidade","Imune","Apêndice"):
+                        stat.append(nm+" "+x["texto"].rstrip(";,")); continue
+                    if tal: tal[-1]["t"]+="\n"+"; ".join(stat); stat=None
+                if nm in("Vida","Poder","Defesa","Percepção") and re.match(r"^[+-]\d",x["texto"]): cx+=" "+nm+" "+x["texto"]; continue
                 if nm=="Atributos Características": cx=x["texto"]; continue
                 if re.match(r"^(d\d|[A-ZÇÃÉÍÓÚ ]{6,})",nm) or len(nm)>45 or nm=="Atributos": continue
                 if nm in("Magia","Características Magia","Magia Exorcista") or (nm=="Magia"):
@@ -42,6 +49,7 @@ for t,ps in d.items():
                     if r and not mg: mg=r
                     tal.append({"n":"Magia","t":x["texto"]}); continue
                 tal.append({"n":nm,"t":x["texto"]})
+            if stat is not None and tal: tal[-1]["t"]+="\n"+"; ".join(stat)
             if re.match(r"(Vida|Poder)",at): cx=at+" "+cx; at=""
             m=re.search(r"\b(dois|três|um)\b",at); esc={"um":1,"dois":2,"três":3}[m.group(1)] if m else 0
             if not esc and ((t=="novato" and k=="1") or (t=="especialista" and k=="3")): esc=2
@@ -51,7 +59,7 @@ for t,ps in d.items():
             if mg: e["mag"]=mg
             if (n,k) in SPELLS: e["feit"]=SPELLS[(n,k)]
             niv[k]=e
-        out.append({"id":slug(n),"nome":n,"tier":t,"desc":p.get("descricao","")[:420],"niv":niv})
+        out.append({"id":slug(n),"nome":n,"tier":t,"desc":p.get("descricao",""),"niv":niv})
 open("../js/data/trilhas.js","w").write("window.SDL=window.SDL||{};SDL.trilhas="+json.dumps(out,ensure_ascii=False,separators=(",",":"))+";")
 print(len(out),sum(1 for o in out for v in o["niv"].values() if "mag" in v),"níveis com magia")
 nomag=[(o["nome"],k) for o in out for k,v in o["niv"].items() if any(x["n"]=="Magia" for x in v["tal"]) and "mag" not in v]

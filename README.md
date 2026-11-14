@@ -24,8 +24,17 @@ Abra `index.html` no navegador (funciona offline; as fontes web são opcionais).
 - Magia das trevas: +1 Corrupção ao descobrir a tradição e teste de d6 ao aprender feitiços.
 - Efeitos de talentos: `SDL.efeitos` (manual) tem prioridade; os demais são inferidos do texto (dádivas em ataque/desafio, dano extra) e aparecem como opções nas janelas de rolagem.
 
+## Fidelidade textual
+Todos os textos de regras (ancestralidades, trilhas, talentos, feitiços, poções, inscrições, regra de trilha secundária) são extraídos do PDF por scripts em `tools/` e conferidos por auditoria de letras (`tools/audit2.py`, `tools/verifica_anc.py`). Tabelas de equipamento foram conferidas visualmente contra as páginas do livro. A remoção de hifenização usa o vocabulário do próprio livro (`tools/vocab.json`) para preservar hifens legítimos (ex.: "ouvi-lo", "mortas-vivas").
+
+## Automação (v1.2)
+- Concessões de magia viram "vagas" com restrições reais (tradição fixa da trilha, tradição da religião, só feitiço, só tradição); o app só permite aprender o que se encaixa.
+- Penalidades de armadura (Força insuficiente: 1 revés em Força/Agilidade e −2 de Velocidade), requisito de arma e arma Incômoda aplicam reveses automaticamente.
+- Trilha de especialista secundária (no lugar da trilha de mestre), com escolha do nível 9 e tratamento de talentos repetidos.
+- Talentos: efeitos inferidos do texto aparecem como opções nas rolagens; na janela do talento é possível marcar "Aplicar sempre" e "Aplicar bônus à ficha" (para bônus em Defesa, Percepção, Velocidade, Vida, Poder).
+
 ## Regenerar dados do PDF
-`python3 tools/build_paths.py && python3 tools/export_trilhas.py && python3 tools/build_magias.py` (requer pdfplumber e o PDF; ajuste o caminho em `tools/extract_paths.py`).
+`cd tools && python3 build_paths.py && python3 export_trilhas.py && python3 build_magias.py && python3 build_anc.py && python3 build_equip.py && python3 build_regras.py` (requer pdfplumber, poppler e o PDF; ajuste o caminho em `tools/extract_paths.py`; `vocab.json` é gerado a partir de `pdftotext`).
 
 ## Limitações conhecidas
-Restrições de tradição por trilha (ex.: "apenas Fogo") e por religião são exibidas como orientação, não bloqueadas. Efeitos inferidos do texto são sugestões marcáveis; condições complexas continuam sob decisão do jogador/MJ.
+Condições situacionais de talentos (ex.: "quando exceder o número-alvo em 5") continuam sob decisão do jogador, mas ficam disponíveis como opções marcáveis. Feitiços do Grimório do Mago e criaturas/companheiros (ex.: Eidolon) aparecem como texto, sem ficha própria.

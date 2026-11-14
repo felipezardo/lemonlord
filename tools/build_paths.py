@@ -1,8 +1,16 @@
 import re, json
 from extract_paths import run, kind
+import os
+_V=json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"vocab.json")))
+ENC={"lo","la","los","las","lhe","lhes","vivos","vivas","vivo","viva","feitiços","feitiço","chamas","costas","mestre","mestres"}
+def _juntar(m):
+    a,b,pt=m.group(1),m.group(2),m.group(3)
+    h=_V.get((a+"-"+b).lower(),0); j=_V.get((a+b).lower(),0)
+    if h>j or (h==0 and j==0 and b.lower() in ENC): return a+"-"+b+pt
+    return a+b+pt
 def clean(s):
-    s=re.sub(r"(\w)- (?=[a-zà-ú])",r"\1",s)
-    s=re.sub(r"\s+-\s+(?=[a-zà-ú])","",s)
+    s=re.sub(r"([A-Za-zÀ-ú]+)(?:-\s+|\s+-\s+)([a-zà-ú]+)([^\sA-Za-zÀ-ú]*)",_juntar,s)
+    s=re.sub(r"(:\s*){2,}",": ",s)
     return re.sub(r"\s+"," ",s).strip()
 def tokens(pages):
     for pn,ws in run(pages):
@@ -45,13 +53,13 @@ def parse(pages,tier):
             pending=None
         elif k=='T' and lvl is None and lastpath and not pending:
             p=paths.setdefault(lastpath,{"nome":lastpath,"tier":tier,"niveis":{}})
-            if "descricao" not in p and len(t)>120: p["descricao"]=t
+            if not t.startswith("d6"): p["descricao"]=(p.get("descricao","")+" "+t).strip() if len(t)>25 or p.get("descricao") else p.get("descricao","")
         elif k=='T' and lvl is not None and not pending and lvl["talentos"]:
             lvl["talentos"][-1]["texto"]+=" "+t
     return paths
 if __name__=="__main__":
     res={}
-    for tier,pgs in (("novato",range(56,60)),("especialista",range(61,78)),("mestre",range(81,100))):
+    for tier,pgs in (("novato",range(56,60)),("especialista",range(61,78)),("mestre",range(80,100))):
         res[tier]=parse(list(pgs),tier)
         print(tier,len(res[tier]),sorted(res[tier])[:60])
     json.dump(res,open("../data/_paths_raw.json","w"),ensure_ascii=False,indent=1)
