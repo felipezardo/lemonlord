@@ -23,6 +23,10 @@ window.SDL = window.SDL || {};
     return el;
   };
   const h = S.h;
+  S.icone = {
+    x: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg>',
+    voltar: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>',
+  };
   S.$ = (s, r) => (r || document).querySelector(s);
   S.uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   S.byId = (arr, id) => arr.find((x) => x.id === id);
@@ -60,7 +64,7 @@ window.SDL = window.SDL || {};
     const tecla = (e) => { if (e.key === "Escape" && fundo === [...document.querySelectorAll(".modal-fundo")].pop()) fechar(); };
     document.addEventListener("keydown", tecla);
     caixa.append(
-      h("header", { class: "modal-topo" }, h("h2", {}, titulo), h("button", { class: "btn-icone", "aria-label": "Fechar", onclick: fechar }, "✕")),
+      h("header", { class: "modal-topo" }, h("h2", {}, titulo), h("button", { class: "btn-icone", "aria-label": "Fechar", onclick: fechar, html: S.icone.x })),
       h("div", { class: "modal-corpo" }, corpo)
     );
     if (acoes.length)
@@ -80,7 +84,7 @@ window.SDL = window.SDL || {};
     });
 
   /* ---------- Tema (sol/lua) ---------- */
-  const SOL = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></g></svg>';
+  const SOL = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><g stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.3 5.3l1.9 1.9M16.8 16.8l1.9 1.9M5.3 18.7l1.9-1.9M16.8 7.2l1.9-1.9"/></g></svg>';
   const LUA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a.7.7 0 0 0-.9-.9A10 10 0 1 0 21.4 15.5a.7.7 0 0 0-.9-.9z"/></svg>';
   S.tema = {
     atual() { return document.documentElement.dataset.tema; },
@@ -224,26 +228,50 @@ window.SDL = window.SDL || {};
     r.insanidade = +c.insanidade || 0; r.corrupcao = +c.corrupcao || 0;
     r.dano = Math.min(+c.dano || 0, r.vida);
     r.estado = r.dano >= r.vida ? "incapacitado" : r.dano >= r.vida / 2 ? "ferido" : "";
-    // magia: cada concessão vira "vagas" (slots) com restrições; tradições/feitiços aprendidos são casados com as vagas
+    // magia: concessões viram "vagas"; descobrir uma tradição concede 1 feitiço de grau 0 (Truque: +1) fora das vagas (Cap. 5)
     const slots = [], religT = (S.religioes.find((x) => x[0] === c.religiao) || [0, null])[1];
     grants.forEach((g) => { for (let i = 0; i < (g.obrig || 0); i++) slots.push({ obrig: true, fonte: g.fonte, rel: g.rel, restr: g.restr });
       for (let i = 0; i < (g.esc || 0); i++) slots.push({ solo: !!g.solo, fonte: g.fonte, rel: g.rel, restr: g.restr }); });
     const mg = c.magias || [], truque = c.trilhas.novato === "magista" && nivel >= 1;
-    const trTipo = (nome) => (S.feiticos.find((x) => x.id === nome) || {}).trad;
-    const itens = c.tradicoes.map((n) => ({ t: "trad", trad: n })).concat(mg.filter((m) => !m.livre).map((m) => ({ t: "spell", trad: m.id ? trTipo(m.id) : m.trad })));
+    const dadosSp = (m) => (m.id ? S.feiticos.find((x) => x.id === m.id) : m) || {};
+    const livre = {}; c.tradicoes.forEach((t) => (livre[t] = (livre[t] || 0) + (truque ? 2 : 1)));
+    const livreUids = new Set(), pagos = [];
+    mg.forEach((m) => { const sp = dadosSp(m); if (sp.grau === 0 && livre[sp.trad] > 0) { livre[sp.trad]--; livreUids.add(m.uid); } else pagos.push(m); });
+    const itens = c.tradicoes.map((n) => ({ t: "trad", trad: n, nome: n })).concat(pagos.map((m) => ({ t: "spell", trad: dadosSp(m).trad, nome: dadosSp(m).nome || m.nome })));
     const aceita = (s, it) => { if (s.obrig && it.t !== "trad") return false; if (s.solo && it.t !== "spell") return false; if (!it.trad || it.trad === "Personalizado") return true; if (s.restr && !s.restr.includes(it.trad)) return false; if (s.rel && religT && !religT.includes(it.trad)) return false; return true; };
-    const casar = (its) => { const m = Array(slots.length).fill(-1); const tenta = (i, vis) => { for (let s = 0; s < slots.length; s++) { if (vis[s] || !aceita(slots[s], its[i])) continue; vis[s] = 1; if (m[s] < 0 || tenta(m[s], vis)) { m[s] = i; return true; } } return false; }; let ok = 0; its.forEach((_, i) => { if (tenta(i, [])) ok++; }); return ok; };
-    const ok = casar(itens);
-    r.mag = { grants, slots, total: slots.length, usado: ok, invalidos: itens.length - ok, truque, livresUsados: mg.filter((m) => m.livre).length, livres: truque ? c.tradicoes.length : 0, religT,
-      podeAdd: (it) => casar(itens.concat([it])) === itens.length + 1 - (itens.length - ok) && ok === itens.length };
-    if (slots.length > ok) r.pend.push({ chave: "magia", falta: slots.length - ok, fonte: "Magia (tradições e feitiços)", magia: true });
-    r.feiticos = mg.map((m) => ({ ...(m.id ? (S.feiticos.find((x) => x.id === m.id) || {}) : m), uid: m.uid, livre: m.livre })).filter((x) => x.nome);
+    const casar = (its) => { const m = Array(slots.length).fill(-1); const tenta = (i, vis) => { for (let s = 0; s < slots.length; s++) { if (vis[s] || !aceita(slots[s], its[i])) continue; vis[s] = 1; if (m[s] < 0 || tenta(m[s], vis)) { m[s] = i; return true; } } return false; }; its.forEach((_, i) => tenta(i, [])); const usados = new Set(m.filter((x) => x >= 0)); return { ok: usados.size, fora: its.filter((_, i) => !usados.has(i)) }; };
+    const base0 = casar(itens);
+    const livresRestantes = Object.values(livre).reduce((a, b2) => a + b2, 0);
+    const trevasN = mg.filter((m) => { const i = S.tradicoesInfo.find((t) => t.nome === dadosSp(m).trad); return i && i.trevas; }).length;
+    r.mag = { grants, slots, total: slots.length, usado: base0.ok, fora: base0.fora, truque, livreUids, livresRestantes, livreDisp: (t) => livre[t] || 0, religT, trevasN,
+      cabe: (it) => { const x = casar(itens.concat([it])); return x.fora.length === base0.fora.length; } };
+    if (slots.length > base0.ok) r.pend.push({ chave: "magia", falta: slots.length - base0.ok, fonte: "Magia (tradições e feitiços)", magia: true });
+    r.feiticos = mg.map((m) => ({ ...dadosSp(m), uid: m.uid, id: m.id, livre: livreUids.has(m.uid) })).filter((x) => x.nome);
     r.feitAuto.forEach((id) => { const f2 = S.feiticosTrilha.find((x) => x.id === id); if (f2 && !r.feiticos.some((x) => x.id === id)) r.feiticos.push({ ...f2, uid: "auto-" + id, auto: true }); });
     r.casts = (grau) => (grau <= r.poder ? (S.conjuracoes[Math.min(r.poder, 10)] || [])[grau] || 0 : 0);
     r.atrTrad = (t) => { const i = S.tradicoesInfo.find((x) => x.nome === t); return i ? i.atr : "intelecto"; };
     r.efAtivos = c.efAtivos || {};
     r.reqArma = (a) => { const b = (a && a.id && S.armas.find((x) => x.id === a.id)) || a; if (!b || !b.reqN) return true; return b.reqAtr === "ambos" ? Math.max(A.forca.v, A.agilidade.v) >= b.reqN : A.forca.v >= b.reqN; };
     r.mod = (k) => (k === "percepcao" ? r.percepcao - 10 : A[k] ? A[k].m : 0);
+    // ---- avisos e notas (nenhuma regra bloqueia o jogador; o app apenas sinaliza) ----
+    const av = []; const A2 = (n, t) => av.push({ n, t });
+    r.pend.forEach((p) => A2("pendente", `${p.fonte}: faltam ${p.falta} escolha(s).`));
+    if (r.mag.fora.length) A2("alerta", `Fora das concessões de magia: ${r.mag.fora.map((x) => x.nome).join(", ")}. Verifique as restrições (tradição fixa da trilha, religião, "só feitiço") ou troque/remova.`);
+    r.feiticos.filter((x) => !x.auto && x.grau > r.poder).forEach((x) => A2("alerta", `${x.nome} (grau ${x.grau}) excede o seu Poder (${r.poder}): só é possível aprender feitiços de grau igual ou inferior ao Poder, e ele não tem conjurações.`));
+    if (r.mag.livresRestantes > 0) A2("nota", `Descobrir uma tradição concede um feitiço de grau 0 dela${truque ? " (e o Truque, mais um)" : ""}: ainda há ${r.mag.livresRestantes} feitiço(s) de grau 0 gratuito(s) a aprender.`);
+    if (r.mag.grants.some((g) => g.rel) && !c.religiao) A2("nota", "Há concessões de magia ligadas à religião: escolha a religião na janela de Magia para filtrar as tradições.");
+    if (r.mag.trevasN) A2("nota", `Magia das trevas: ${r.mag.trevasN} feitiço(s) aprendido(s). Cada um concede 1 dádiva em rolagens de desafio para evitar Insanidade; confira se a Corrupção foi atualizada.`);
+    if (r.armInsuf) A2("alerta", `Armadura (${arm.nome}) exige Força ${arm.req}: você sofre 1 revés em rolagens de Força e Agilidade e −2 de Velocidade.`);
+    (c.armas || []).forEach((a) => { if (!r.reqArma(a)) A2("alerta", `${a.nome}: requisito de Força/Agilidade não cumprido (1 revés nos ataques).`); });
+    if (c.escudo) { const e2 = S.byId(S.armas, c.escudo); if (e2 && !r.reqArma(e2)) A2("alerta", `${e2.nome}: requisito de Força não cumprido.`); }
+    for (const b of r.ben) { const n = (c.picks[b.chave] || []).length; if (b.esc && n > b.esc) A2("alerta", `${b.fonte}: ${n} atributos marcados, mas só ${b.esc} contam; os demais são ignorados.`); }
+    for (const e of r.escolhasTal) { const n = (c.talEsc[e.chave] || []).length; if (n > e.max) A2("alerta", `${e.nome} (${e.fonte}): ${n} escolhas marcadas, mas o limite é ${e.max}; as extras são ignoradas.`); }
+    [["novato", 1, "Novato"], ["especialista", 3, "Especialista"], ["mestre", 7, "Mestre"]].forEach(([tier, min, nm]) => { if (c.trilhas[tier] && nivel < min) A2("nota", `Trilha de ${nm} escolhida: os benefícios começam no nível ${min} (o nível atual é ${nivel}).`); });
+    if (nivel >= 3 && !c.trilhas.especialista) A2("nota", "Nível 3 ou superior sem trilha de Especialista escolhida.");
+    if (nivel >= 7 && !c.trilhas.mestre) A2("nota", "Nível 7 ou superior sem trilha de Mestre (ou especialista secundária) escolhida.");
+    if (nivel >= 1 && !c.trilhas.novato) A2("nota", "Sem trilha de Novato escolhida.");
+    if (!c.anc) A2("nota", "Ancestralidade não escolhida.");
+    r.avisos = av;
     return r;
   };
 

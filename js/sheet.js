@@ -50,7 +50,7 @@
 
     function modalEscolhas() {
       const c = S.calcular(f); const box = h("div", { class: "escolhas" });
-      const botoesAtr = (sel, max, fn) => h("div", { class: "grupo-btn" }, S.ATR.map(([k, n]) => h("button", { class: "btn peq" + (sel.includes(k) ? " primario" : ""), "aria-pressed": sel.includes(k), onclick: () => { let s = sel.slice(); if (s.includes(k)) s = s.filter((x) => x !== k); else { if (s.length >= max) s.shift(); s.push(k); } fn(s); redraw(); } }, n)));
+      const botoesAtr = (sel, max, fn) => h("div", { class: "grupo-btn" }, S.ATR.map(([k, n]) => h("button", { class: "btn peq" + (sel.includes(k) ? " primario" : ""), "aria-pressed": sel.includes(k), onclick: () => { let s = sel.slice(); if (s.includes(k)) s = s.filter((x) => x !== k); else s.push(k); fn(s); redraw(); } }, n)));
       function redraw() {
         const cc = S.calcular(f); box.replaceChildren();
         const anc = cc.anc;
@@ -61,7 +61,7 @@
         const sel = (v) => h("select", { onchange: (e) => { f.ajuste[v] = e.target.value; redraw(); } }, h("option", { value: "" }, "—"), S.ATR.map(([k, n]) => h("option", { value: k, selected: f.ajuste[v] === k }, n)));
         box.append(h("section", {}, h("h3", {}, "Ajuste de atributos (uma vez)"), h("p", { class: "dica" }, "Aumente um valor em 1 diminuindo outro em 1."), h("div", { class: "linha" }, h("label", {}, "+1 em ", sel("mais")), h("label", {}, "−1 em ", sel("menos")))));
         for (const b of cc.ben) {
-          if (b.esc) box.append(h("section", {}, h("h3", {}, b.fonte), h("p", { class: "dica" }, `Aumente ${b.esc} atributo${b.esc > 1 ? "s" : ""} em 1 (escolha ${b.esc} diferentes).`), botoesAtr(f.picks[b.chave] || [], b.esc, (s) => (f.picks[b.chave] = s))));
+          if (b.esc) box.append(h("section", {}, h("h3", {}, b.fonte), h("p", { class: "dica" }, `Aumente ${b.esc} atributo${b.esc > 1 ? "s" : ""} em 1 (escolha ${b.esc} diferentes; se marcar mais, o site apenas avisa).`), botoesAtr(f.picks[b.chave] || [], b.esc, (s) => (f.picks[b.chave] = s))));
           if (b.chave === "anc:4") box.append(h("section", {}, h("h3", {}, b.fonte), h("p", { class: "dica" }, b.ancEscolha), h("div", { class: "grupo-btn" },
             [["talento", "Ganhar o talento"], ["feitico", "Aprender um feitiço"]].map(([v, n]) => h("button", { class: "btn peq" + ((f.escolhas["anc:4"] || "talento") === v ? " primario" : ""), onclick: () => { f.escolhas["anc:4"] = v; redraw(); } }, n)))));
         }
@@ -74,7 +74,7 @@
         for (const e of cc.escolhasTal) {
           const sel = f.talEsc[e.chave] || [];
           box.append(h("section", {}, h("h3", {}, `${e.nome} — ${e.fonte}`), h("p", { class: "dica" }, `Escolha ${e.max} (${sel.length}/${e.max}).`),
-            S.talentosEscolha[e.kind].map((o) => h("details", { class: "op-tal" }, h("summary", {}, h("button", { class: "btn peq" + (sel.includes(o.n) ? " primario" : ""), "aria-pressed": sel.includes(o.n), onclick: (ev) => { ev.preventDefault(); let s2 = sel.slice(); if (s2.includes(o.n)) s2 = s2.filter((x) => x !== o.n); else { if (s2.length >= e.max) s2.shift(); s2.push(o.n); } f.talEsc[e.chave] = s2; redraw(); } }, o.n)), h("p", { class: "peq" }, o.t)))));
+            S.talentosEscolha[e.kind].map((o) => h("details", { class: "op-tal" }, h("summary", {}, h("button", { class: "btn peq" + (sel.includes(o.n) ? " primario" : ""), "aria-pressed": sel.includes(o.n), onclick: (ev) => { ev.preventDefault(); let s2 = sel.slice(); if (s2.includes(o.n)) s2 = s2.filter((x) => x !== o.n); else s2.push(o.n); f.talEsc[e.chave] = s2; redraw(); } }, o.n)), h("p", { class: "peq" }, o.t)))));
         }
         if (cc.mag.total || cc.mag.usado) box.append(h("section", {}, h("h3", {}, "Magia"), h("p", { class: "dica" }, `Tradições e feitiços: ${cc.mag.usado}/${cc.mag.total} escolhas feitas.`), h("button", { class: "btn peq primario", onclick: () => modalMagia() }, "Abrir Magia")));
         if (!box.children.length) box.append(h("p", {}, "Nenhuma escolha disponível ainda."));
@@ -88,7 +88,7 @@
       const add = (n) => { mut(() => f.profissoes.push(n)); S.toast("Profissão adicionada: " + n); };
       const livre = h("input", { type: "text", placeholder: "Profissão personalizada ou especialização", "aria-label": "Profissão personalizada" });
       function desenha() {
-        lista.replaceChildren(...S.profissoes[cat].filter((p) => p.toLowerCase().includes(busca)).map((p) => h("button", { class: "card-op", onclick: () => { if (/\(escolha/.test(p)) { livre.value = p.replace(/\s*\(.*\)/, "") + ": "; livre.focus(); } else add(p); } }, p)));
+        lista.replaceChildren(...S.profissoes[cat].filter((p) => p.toLowerCase().includes(busca)).map((p) => { const tem = f.profissoes.includes(p); return h("button", { class: "card-op" + (tem ? " sel" : ""), "aria-pressed": tem, onclick: () => { if (/\(escolha/.test(p)) { livre.value = p.replace(/\s*\(.*\)/, "") + ": "; livre.focus(); } else if (tem) { mut(() => (f.profissoes = f.profissoes.filter((x) => x !== p))); desenha(); } else { add(p); desenha(); } } }, p, tem ? h("small", {}, "adicionada — clique para remover") : null); }));
       }
       S.modal({ titulo: "Adicionar profissão", largura: "lg", corpo: h("div", {},
         h("div", { class: "grupo-btn" }, Object.keys(S.profissoes).map((k) => h("button", { class: "btn peq", onclick: (e) => { cat = k; [...e.target.parentNode.children].forEach((b) => b.classList.toggle("primario", b === e.target)); desenha(); } }, k))),
@@ -98,19 +98,19 @@
     }
 
     function modalEquip(aba = "Armas") {
-      const corpo = h("div", {}); const abas = ["Armas", "Armaduras", "Escudos", "Itens", "Personalizado"]; let busca = "";
+      const corpo = h("div", {}); const act = (fn) => { mut(fn); desenha(); }; const abas = ["Armas", "Armaduras", "Escudos", "Itens", "Personalizado"]; let busca = "";
       const fecha = S.modal({ titulo: "Equipamento", corpo, largura: "lg" });
       const aviso = (req) => { const m = /(\d+)/.exec(req || ""); if (m && calc.atrs.forca.v < +m[1] && !/Agilidade/.test(req)) S.toast(`Atenção: requer Força ${m[1]}+ (você tem ${calc.atrs.forca.v}).`); };
       const linha = (titulo, sub, botao) => h("div", { class: "item-cat" }, h("div", {}, h("strong", {}, titulo), h("small", {}, sub)), botao);
       function desenha() {
         const q = busca.toLowerCase(); let lista = [];
-        if (aba === "Armas") lista = S.armas.filter((a) => a.cat !== "Escudo" && a.nome.toLowerCase().includes(q)).map((a) => linha(a.nome, `${a.dano} · ${a.maos} · ${a.prop} · ${a.preco} · disp. ${a.disp} · ${a.cat}${a.req ? " · requer " + a.req : ""}`, h("button", { class: "btn peq", onclick: () => { aviso(a.req); mut(() => f.armas.push({ uid: S.uid(), id: a.id, nome: a.nome, dano: a.dano, prop: a.prop, cat: a.cat })); S.toast("Arma adicionada"); } }, "Adicionar")));
-        if (aba === "Armaduras") lista = S.armaduras.map((a) => linha(a.nome, `${a.tipo} · Defesa ${a.def != null ? a.def : "Agilidade" + (a.bonus ? " +" + a.bonus : "")} · ${a.preco} · disp. ${a.disp}${a.req ? " · requer Força " + a.req + "+" : ""}`, h("button", { class: "btn peq" + (f.armadura === a.id ? " primario" : ""), onclick: () => { aviso("Força " + a.req); mut(() => (f.armadura = a.id)); } }, f.armadura === a.id ? "Vestindo" : "Vestir")));
-        if (aba === "Escudos") lista = [linha("Sem escudo", "", h("button", { class: "btn peq", onclick: () => mut(() => (f.escudo = "")) }, "Remover"))].concat(S.armas.filter((a) => a.cat === "Escudo").map((a) => linha(a.nome, `${a.prop} · ${a.preco}`, h("button", { class: "btn peq" + (f.escudo === a.id ? " primario" : ""), onclick: () => { mut(() => (f.escudo = a.id)); } }, f.escudo === a.id ? "Equipado" : "Equipar"))));
-        if (aba === "Itens") lista = S.itens.filter((i) => i.nome.toLowerCase().includes(q)).map((i) => linha(i.nome, [i.cat, i.preco, i.disp].filter(Boolean).join(" · ") + (i.desc ? " — " + i.desc : ""), h("button", { class: "btn peq", onclick: () => { mut(() => { const e = f.equip.find((x) => x.nome === i.nome); if (e) e.qtd++; else f.equip.push({ uid: S.uid(), nome: i.nome, qtd: 1 }); }); S.toast("Item adicionado"); } }, "Adicionar")));
+        if (aba === "Armas") lista = S.armas.filter((a) => a.cat !== "Escudo" && a.nome.toLowerCase().includes(q)).map((a) => linha(a.nome, `${a.dano} · ${a.maos} · ${a.prop} · ${a.preco} · disp. ${a.disp} · ${a.cat}${a.req ? " · requer " + a.req : ""}`, h("button", { class: "btn peq", onclick: () => { aviso(a.req); act(() => f.armas.push({ uid: S.uid(), id: a.id, nome: a.nome, dano: a.dano, prop: a.prop, cat: a.cat })); S.toast("Arma adicionada"); } }, "Adicionar")));
+        if (aba === "Armaduras") lista = S.armaduras.map((a) => linha(a.nome, `${a.tipo} · Defesa ${a.def != null ? a.def : "Agilidade" + (a.bonus ? " +" + a.bonus : "")} · ${a.preco} · disp. ${a.disp}${a.req ? " · requer Força " + a.req + "+" : ""}`, h("button", { class: "btn peq" + (f.armadura === a.id ? " primario" : ""), onclick: () => { aviso("Força " + a.req); act(() => (f.armadura = f.armadura === a.id ? "" : a.id)); } }, f.armadura === a.id ? "Tirar" : "Vestir")));
+        if (aba === "Escudos") lista = [linha("Sem escudo", f.escudo ? "" : "Nenhum escudo equipado", h("button", { class: "btn peq", disabled: !f.escudo, onclick: () => act(() => (f.escudo = "")) }, "Sem escudo"))].concat(S.armas.filter((a) => a.cat === "Escudo").map((a) => linha(a.nome, `${a.prop} · ${a.preco}`, h("button", { class: "btn peq" + (f.escudo === a.id ? " primario" : ""), onclick: () => { act(() => (f.escudo = f.escudo === a.id ? "" : a.id)); } }, f.escudo === a.id ? "Retirar" : "Equipar"))));
+        if (aba === "Itens") lista = S.itens.filter((i) => i.nome.toLowerCase().includes(q)).map((i) => linha(i.nome, [i.cat, i.preco, i.disp].filter(Boolean).join(" · ") + (i.desc ? " — " + i.desc : ""), h("button", { class: "btn peq", onclick: () => { act(() => { const e = f.equip.find((x) => x.nome === i.nome); if (e) e.qtd++; else f.equip.push({ uid: S.uid(), nome: i.nome, qtd: 1 }); }); S.toast("Item adicionado"); } }, "Adicionar")));
         if (aba === "Personalizado") {
           const n = h("input", { type: "text", placeholder: "Nome" }), d = h("input", { type: "text", placeholder: "Dano (ex.: 1d6+1) — vazio para item comum" });
-          lista = [h("div", { class: "form-col" }, n, d, h("button", { class: "btn primario", onclick: () => { if (!n.value.trim()) return; const dm = d.value.trim(); if (dm && !S.dados.expr(dm)) return S.toast("Dano inválido"); mut(() => (dm ? f.armas.push({ uid: S.uid(), nome: n.value.trim(), dano: dm, prop: "", cat: "Personalizada" }) : f.equip.push({ uid: S.uid(), nome: n.value.trim(), qtd: 1 }))); n.value = d.value = ""; } }, "Adicionar"))];
+          lista = [h("div", { class: "form-col" }, n, d, h("button", { class: "btn primario", onclick: () => { if (!n.value.trim()) return; const dm = d.value.trim(); if (dm && !S.dados.expr(dm)) return S.toast("Dano inválido"); act(() => (dm ? f.armas.push({ uid: S.uid(), nome: n.value.trim(), dano: dm, prop: "", cat: "Personalizada" }) : f.equip.push({ uid: S.uid(), nome: n.value.trim(), qtd: 1 }))); n.value = d.value = ""; } }, "Adicionar"))];
         }
         corpo.replaceChildren(h("div", { class: "grupo-btn" }, abas.map((a) => h("button", { class: "btn peq" + (a === aba ? " primario" : ""), onclick: () => { aba = a; desenha(); } }, a))),
           ["Armas", "Itens"].includes(aba) ? h("input", { type: "search", class: "busca", placeholder: "Buscar…", value: busca, oninput: (e) => { busca = e.target.value; desenha(); document.querySelector(".busca").focus(); } }) : null, h("div", { class: "lista-cat" }, lista));
@@ -144,50 +144,62 @@
           sp.tipo === "Ataque" ? { texto: "Rolar ataque", classe: "primario", manter: true, fn: () => S.rolarContexto({ calc: S.calcular(f), titulo: "Conjurar — " + sp.nome, tipo: "ataque", attr: atr, feitico: sp }) } : null].filter(Boolean) });
     }
 
+    function listaAvisos(avs, vazio = "Nenhum aviso.") {
+      const rot = { alerta: "Alerta", nota: "Nota", pendente: "Pendente" };
+      return avs.length ? h("ul", { class: "avisos" }, avs.map((a) => h("li", { class: "aviso " + a.n }, h("b", {}, rot[a.n]), a.t))) : h("p", { class: "dica" }, vazio);
+    }
+    function modalAvisos() {
+      S.modal({ titulo: "Avisos e notas", largura: "md", corpo: h("div", {}, h("p", { class: "dica" }, "O site não bloqueia nenhuma escolha: ele apenas avisa quando algo parece fora das regras do livro, para você (e o Mestre) decidirem."), listaAvisos(calc.avisos, "Tudo em ordem: nenhuma inconsistência encontrada.")) });
+    }
+
     function modalMagia(aba = "Tradições") {
       const corpo = h("div", { class: "magia-ed" }); let busca = "", ftrad = "";
       S.modal({ titulo: "Magia", corpo, largura: "lg", aoFechar: render });
-      const nomeT = (n) => n;
       function desenha() {
-        const c = S.calcular(f), M = c.mag, livre = M.truque && M.livresUsados < M.livres;
-        const restantes = M.total - M.usado;
-        const sum = h("div", { class: "mag-sum" }, h("strong", {}, `Poder ${c.poder}`), ` · escolhas de magia: ${M.usado}/${M.total}`, M.truque ? ` · Truque: ${M.livresUsados}/${M.livres} feitiços de grau 0 extras` : "", M.invalidos ? h("p", { class: "alerta-txt" }, `⚠ ${M.invalidos} item(ns) não se encaixam mais nas concessões atuais (por trilha/religião alterada). Remova ou troque.`) : null,
-          h("ul", {}, M.grants.map((g) => h("li", {}, `${g.fonte}: ${g.obrig ? "descubra 1 tradição + " : ""}${g.esc ? g.esc + (g.solo ? " feitiço(s)" : " escolha(s) (tradição ou feitiço)") : ""}${g.restr ? " — apenas " + g.restr.join(", ") : ""}${g.rel ? " — tradição da sua religião" + (M.religT ? "" : " (escolha a religião abaixo)") : ""}`))));
+        const c = S.calcular(f), M = c.mag;
+        const sum = h("div", { class: "mag-sum" }, h("strong", {}, `Poder ${c.poder}`), ` · vagas usadas: ${M.usado}/${M.total}`,
+          h("ul", {}, M.grants.map((g) => h("li", {}, `${g.fonte}: ${g.obrig ? "descubra 1 tradição + " : ""}${g.esc ? g.esc + (g.solo ? " feitiço(s)" : " escolha(s) (tradição ou feitiço)") : ""}${g.restr ? " — apenas " + g.restr.join(", ") : ""}${g.rel ? " — tradição da sua religião" : ""}`))),
+          h("p", { class: "dica" }, `Descobrir uma tradição concede, além disso, um feitiço de grau 0 dela${M.truque ? " (o Truque do Magista concede mais um)" : ""}. Trocar feitiços: ao aprender um feitiço novo, você pode trocar um já aprendido por outro de mesmo grau ou inferior.`));
+        const av = calc ? S.calcular(f).avisos.filter((x) => /magia|feiti|religi|tradi|Poder/i.test(x.t)) : [];
         const rel = M.grants.some((g) => g.rel) ? h("label", { class: "linha-rel" }, "Religião: ", h("select", { onchange: (e) => { f.religiao = e.target.value; desenha(); } }, h("option", { value: "" }, "—"), S.religioes.map((r) => h("option", { value: r[0], selected: f.religiao === r[0] }, `${r[0]} (${r[1].join(", ")})`)))) : null;
-        const religTrads = M.religT;
-        const abas = h("div", { class: "grupo-btn" }, ["Tradições", "Feitiços", "Meus feitiços"].map((a) => h("button", { class: "btn peq" + (a === aba ? " primario" : ""), onclick: () => { aba = a; desenha(); } }, a)));
+        const abas = h("div", { class: "grupo-btn" }, ["Tradições", "Feitiços", "Meus feitiços"].map((a) => h("button", { class: "btn peq" + (a === aba ? " primario" : ""), "aria-pressed": a === aba, onclick: () => { aba = a; desenha(); } }, a)));
         let lista;
         if (aba === "Tradições") {
           lista = h("div", { class: "cards peq" }, S.tradicoesInfo.slice().sort((a, b) => a.nome.localeCompare(b.nome, "pt")).map((t) => {
-            const tem = f.tradicoes.includes(t.nome), dela = religTrads && religTrads.includes(t.nome);
-            const pode = !tem && restantes > 0 && M.podeAdd({ t: "trad", trad: t.nome });
-            return h("div", { class: "card-op" + (tem ? " sel" : ""), style: religTrads && !dela && !tem ? { opacity: 0.55 } : {} }, h("strong", {}, t.nome),
-              h("small", {}, `${S.ATR_NOME[t.atr]}${t.trevas ? " · magia das trevas (+1 Corrupção)" : ""}${dela ? " · da sua religião" : ""}`),
-              tem ? h("button", { class: "btn peq", onclick: () => { f.tradicoes = f.tradicoes.filter((x) => x !== t.nome); desenha(); } }, "Esquecer")
-                : h("button", { class: "btn peq primario", disabled: !pode, title: pode ? "" : "Nenhuma escolha de magia disponível para esta tradição (verifique as restrições listadas acima)", onclick: () => { f.tradicoes.push(t.nome); if (t.trevas) { f.corrupcao = (+f.corrupcao || 0) + 1; S.toast("Magia das trevas: +1 Corrupção"); } if (M.truque) S.toast("Truque: aprenda um feitiço extra de grau 0 desta tradição."); desenha(); } }, "Descobrir"));
+            const tem = f.tradicoes.includes(t.nome), dela = M.religT && M.religT.includes(t.nome), fora = !tem && !M.cabe({ t: "trad", trad: t.nome, nome: t.nome });
+            return h("div", { class: "card-op" + (tem ? " sel" : "") }, h("strong", {}, t.nome),
+              h("small", {}, `${S.ATR_NOME[t.atr]}${t.trevas ? " · magia das trevas" : ""}${dela ? " · da sua religião" : ""}`),
+              fora ? h("small", { class: "fora" }, "fora das concessões atuais") : null,
+              h("button", { class: "btn peq" + (tem ? "" : " primario"), onclick: () => {
+                if (tem) f.tradicoes = f.tradicoes.filter((x) => x !== t.nome);
+                else { f.tradicoes.push(t.nome); if (t.trevas) { f.corrupcao = (+f.corrupcao || 0) + 1; S.toast("Magia das trevas: +1 Corrupção"); } S.toast("Tradição descoberta: você também aprende um feitiço de grau 0 dela."); }
+                desenha(); } }, tem ? "Esquecer" : "Descobrir"));
           }));
         } else if (aba === "Feitiços") {
-          const tr = f.tradicoes.slice().sort((a, b) => a.localeCompare(b, "pt"));
-          const q = busca.toLowerCase();
+          const tr = f.tradicoes.slice().sort((a, b) => a.localeCompare(b, "pt")); const q = busca.toLowerCase();
           const itens = S.feiticos.filter((x) => tr.includes(x.trad) && (!ftrad || x.trad === ftrad) && x.nome.toLowerCase().includes(q) && !c.feiticos.some((y) => y.id === x.id));
           lista = h("div", {}, h("div", { class: "linha" }, h("select", { "aria-label": "Tradição", onchange: (e) => { ftrad = e.target.value; desenha(); } }, h("option", { value: "" }, "Todas as tradições descobertas"), tr.map((t) => h("option", { value: t, selected: ftrad === t }, t))),
             h("input", { type: "search", class: "busca", placeholder: "Buscar feitiço…", value: busca, oninput: (e) => { busca = e.target.value; desenha(); const i = document.querySelector(".magia-ed .busca"); i.focus(); i.setSelectionRange(99, 99); } })),
-            tr.length ? null : h("p", { class: "dica" }, "Descubra uma tradição primeiro."), h("div", { class: "lista-cat" }, itens.map((x) => {
-              const alto = x.grau > c.poder, gratis = livre && x.grau === 0 && x.trad && f.tradicoes.includes(x.trad), cabe = M.podeAdd({ t: "spell", trad: x.trad }), ok = !alto && ((restantes > 0 && cabe) || gratis);
-              return h("div", { class: "item-cat" }, h("div", {}, h("button", { class: "tal-n", onclick: () => modalFeitico(x) }, x.nome), h("small", {}, `${x.tipo} · ${x.trad} · grau ${x.grau}`)),
-                h("button", { class: "btn peq primario", disabled: !ok, title: alto ? "Grau acima do seu Poder" : !ok ? "Sem escolha de feitiço disponível para esta tradição (restrição de trilha/religião)" : "", onclick: () => {
+            tr.length ? null : h("p", { class: "dica" }, "Descubra uma tradição primeiro (ou use a aba Meus feitiços para um feitiço personalizado)."),
+            h("div", { class: "lista-cat" }, itens.map((x) => {
+              const gratis = x.grau === 0 && M.livreDisp(x.trad) > 0, alto = x.grau > c.poder, fora = !gratis && !M.cabe({ t: "spell", trad: x.trad, nome: x.nome });
+              return h("div", { class: "item-cat" }, h("div", {}, h("button", { class: "tal-n", onclick: () => modalFeitico(x) }, x.nome),
+                h("small", {}, `${x.tipo} · ${x.trad} · grau ${x.grau}`, gratis ? " · gratuito (descoberta da tradição)" : ""), alto ? h("small", { class: "fora" }, `grau acima do seu Poder (${c.poder})`) : null, fora ? h("small", { class: "fora" }, "fora das concessões atuais") : null),
+                h("button", { class: "btn peq primario", onclick: () => {
+                  f.magias.push({ uid: S.uid(), id: x.id });
                   const l = S.tradicoesInfo.find((t) => t.nome === x.trad);
-                  f.magias.push({ uid: S.uid(), id: x.id, livre: !(restantes > 0 && cabe) && gratis });
                   if (l && l.trevas) { const n = f.magias.filter((m) => { const sp = S.feiticos.find((z) => z.id === m.id); return sp && S.tradicoesInfo.find((t) => t.nome === sp.trad).trevas; }).length; const d6 = S.dados.d(6); if (d6 < n) { f.corrupcao = (+f.corrupcao || 0) + 1; S.toast(`Magia das trevas: d6 = ${d6} (< ${n}) → +1 Corrupção`); } else S.toast(`Magia das trevas: d6 = ${d6}; sem Corrupção.`); }
-                  desenha(); } }, gratis && !(restantes > 0 && cabe) ? "Aprender (truque)" : "Aprender"));
+                  desenha(); } }, "Aprender"));
             })));
         } else {
-          lista = h("div", { class: "lista-cat" }, c.feiticos.length ? c.feiticos.map((x) => h("div", { class: "item-cat" }, h("div", {}, h("button", { class: "tal-n", onclick: () => modalFeitico(x) }, x.nome), h("small", {}, `${x.tipo || ""} · ${x.trad === "Trilha" ? "trilha" : x.trad} · grau ${x.grau}${x.livre ? " · truque" : ""}${x.auto ? " · concedido pela trilha" : ""}`)),
-            x.auto ? null : h("button", { class: "btn peq perigo", onclick: () => { f.magias = f.magias.filter((m) => m.uid !== x.uid); desenha(); } }, "Trocar/remover"))) : h("p", { class: "dica" }, "Nenhum feitiço aprendido."),
+          lista = h("div", { class: "lista-cat" }, c.feiticos.length ? c.feiticos.map((x) => h("div", { class: "item-cat" }, h("div", {}, h("button", { class: "tal-n", onclick: () => modalFeitico(x) }, x.nome), h("small", {}, `${x.tipo || ""} · ${x.trad === "Trilha" ? "trilha" : x.trad} · grau ${x.grau}${x.livre ? " · gratuito (descoberta)" : ""}${x.auto ? " · concedido pela trilha" : ""}`),
+            !x.auto && x.grau > c.poder ? h("small", { class: "fora" }, "grau acima do seu Poder") : null, !x.auto && M.fora.some((o) => o.nome === x.nome) ? h("small", { class: "fora" }, "fora das concessões atuais") : null),
+            x.auto ? null : h("button", { class: "btn peq perigo", onclick: () => { f.magias = f.magias.filter((m) => m.uid !== x.uid); desenha(); } }, "Trocar / remover"))) : h("p", { class: "dica" }, "Nenhum feitiço aprendido."),
             h("details", {}, h("summary", {}, "Feitiço personalizado"), (() => { const n = h("input", { type: "text", placeholder: "Nome" }), g = h("input", { type: "number", min: 0, max: 10, value: 0 }), t = h("textarea", { rows: 3, placeholder: "Descrição" });
               return h("div", { class: "form-col" }, n, h("label", {}, "Grau", g), t, h("button", { class: "btn", onclick: () => { if (!n.value.trim()) return; f.magias.push({ uid: S.uid(), nome: n.value.trim(), grau: +g.value || 0, trad: "Personalizado", tipo: "Utilitário", texto: t.value }); desenha(); } }, "Adicionar")); })()));
         }
-        corpo.replaceChildren(...[sum, rel, abas, lista].filter(Boolean));
+        corpo.replaceChildren(...[sum, av.length ? listaAvisos(av) : null, rel, abas, lista].filter(Boolean));
+        salvar();
       }
       desenha();
     }
@@ -262,40 +274,41 @@
         h("div", { class: "medalhao" }, stats),
         h("div", { class: "p p-nome", style: pct(70, 12, 312, 44) }, h("input", { type: "text", class: "campo-nome", placeholder: "Nome do personagem", "aria-label": "Nome", value: f.nome, oninput: salvarTxt("nome") })),
         h("div", { class: "p p-retrato", style: { left: (22 / W) * 100 + "%", top: (112 / H) * 100 + "%", width: (122 / W) * 100 + "%" } },
-          h("button", { class: "retrato", "aria-label": "Editar retrato", onclick: () => S.editarRetrato(f.retrato, (d) => mut(() => (f.retrato = d))) }, f.retrato ? h("img", { src: f.retrato, alt: "Retrato de " + (f.nome || "personagem") }) : h("span", {}, "＋ Retrato"))),
+          h("button", { class: "retrato", "aria-label": "Editar retrato", onclick: () => S.editarRetrato(f.retrato, (d) => mut(() => (f.retrato = d))) }, f.retrato ? h("img", { src: f.retrato, alt: "Retrato de " + (f.nome || "personagem") }) : h("span", {}, "Adicionar retrato"))),
         h("div", { class: "p", style: pct(150, 108, 312, 300) }, h("textarea", { class: "campo-area", placeholder: "Aparência, personalidade, história…", "aria-label": "Descrição", oninput: salvarTxt("descricao") }, f.descricao)),
         h("div", { class: "p", style: pct(340, 38, 545, 68) }, h("button", { class: "btn-campo" + (anc ? "" : " sem-valor"), onclick: modalAncestralidade }, anc ? anc.nome : "Escolher ancestralidade")),
         TIERS.map(([t, r, m]) => trilhaBtn(t, r, m)),
-        painel("p-prof", "", pct(620, 40, 925, 300), h("ul", { class: "chips" }, f.profissoes.map((p, i) => h("li", { class: "chip" }, p, h("button", { "aria-label": "Remover " + p, onclick: () => mut(() => f.profissoes.splice(i, 1)) }, "×")))),
-          h("button", { class: "btn peq", onclick: modalProfissao }, "＋ Profissão"), anc ? h("p", { class: "idi" }, anc.idiomas) : null, c.idiomas.map((i) => h("p", { class: "idi" }, h("b", {}, i.fonte + ": "), i.texto))),
+        painel("p-prof", "", pct(620, 40, 925, 300), h("ul", { class: "chips" }, f.profissoes.map((p, i) => h("li", { class: "chip" }, p, h("button", { "aria-label": "Remover " + p, onclick: () => mut(() => f.profissoes.splice(i, 1)), html: S.icone.x })))),
+          h("button", { class: "btn peq", onclick: modalProfissao }, "Adicionar profissão"), anc ? h("p", { class: "idi" }, anc.idiomas) : null, c.idiomas.map((i) => h("p", { class: "idi" }, h("b", {}, i.fonte + ": "), i.texto))),
         painel("p-tal", "", pct(12, 345, 200, 940),
-          c.pend.length ? h("button", { class: "alerta", onclick: modalEscolhas }, `⚠ ${c.pend.reduce((a, p) => a + p.falta, 0)} escolha(s) pendente(s)`) : h("button", { class: "btn peq", onclick: modalEscolhas }, "Escolhas de nível"),
+          c.pend.length ? h("button", { class: "alerta", onclick: modalEscolhas }, `Escolhas pendentes: ${c.pend.reduce((a, p) => a + p.falta, 0)}`) : h("button", { class: "btn peq", onclick: modalEscolhas }, "Escolhas de nível"),
           Object.entries(grupos).map(([g, l]) => h("div", { class: "grupo" }, h("h3", {}, g), h("ul", {}, l.map(nomeTal)))),
-          h("button", { class: "btn peq", onclick: modalNovoTalento }, "＋ Talento")),
+          h("button", { class: "btn peq", onclick: modalNovoTalento }, "Adicionar talento")),
         painel("p-mag", "", pct(705, 345, 922, 915),
           h("ul", { class: "chips" }, f.tradicoes.map((t) => h("li", { class: "chip" }, t))),
           h("ul", { class: "lista-mag" }, c.feiticos.slice().sort((a, b) => a.grau - b.grau).map((m) => { const tot = c.casts(m.grau), g = f.conj[m.uid || m.id] || 0;
-            return h("li", {}, h("button", { class: "tal-n", title: "Abrir feitiço", onclick: () => modalFeitico(m) }, m.nome), h("span", { class: "pips", "aria-label": `${Math.max(0, tot - g)} de ${tot} conjurações` }, "●".repeat(Math.max(0, tot - g)) + "○".repeat(Math.min(g, tot)), h("small", {}, " g" + m.grau))); })),
+            return h("li", {}, h("button", { class: "tal-n", title: "Abrir feitiço", onclick: () => modalFeitico(m) }, m.nome), h("span", { class: "pips", role: "img", "aria-label": `${Math.max(0, tot - g)} de ${tot} conjurações` }, Array.from({ length: Math.max(0, tot - g) }, () => h("i", { class: "pip cheio" })), Array.from({ length: Math.min(g, tot) }, () => h("i", { class: "pip" })), h("small", {}, " grau " + m.grau))); })),
           h("button", { class: "btn peq", onclick: () => modalMagia() }, "Magia…")),
         painel("p-est", "", pct(240, 868, 690, 975), h("div", { class: "linha-est" },
-          h("button", { class: "btn peq", onclick: modalAflicoes }, "Aflições"), f.aflicoes.length ? f.aflicoes.map((a) => h("span", { class: "chip aflicao" }, a)) : h("small", {}, "nenhuma"))),
+          h("button", { class: "btn peq", onclick: modalAflicoes }, "Aflições"), h("button", { class: "btn peq" + (c.avisos.some((x) => x.n === "alerta") ? " perigo" : ""), onclick: modalAvisos }, `Avisos (${c.avisos.length})`), f.aflicoes.length ? f.aflicoes.map((a) => h("span", { class: "chip aflicao" }, a)) : h("small", {}, "nenhuma"))),
         painel("p-arm", "", pct(15, 985, 235, 1165), h("ul", { class: "armas" }, f.armas.map((a, i) => h("li", {}, h("div", {}, h("b", {}, a.nome), h("small", {}, a.dano + (a.prop ? " · " + a.prop : ""))),
-          h("div", { class: "arma-bt" }, h("button", { class: "btn peq primario", onclick: () => atacar(a) }, "Atacar"), h("button", { class: "btn-icone", "aria-label": "Remover " + a.nome, onclick: () => mut(() => f.armas.splice(i, 1)) }, "×"))))),
-          h("button", { class: "btn peq", onclick: () => modalEquip("Armas") }, "＋ Arma")),
+          h("div", { class: "arma-bt" }, h("button", { class: "btn peq primario", onclick: () => atacar(a) }, "Atacar"), h("button", { class: "btn-icone", "aria-label": "Remover " + a.nome, onclick: () => mut(() => f.armas.splice(i, 1)), html: S.icone.x }))))),
+          h("button", { class: "btn peq", onclick: () => modalEquip("Armas") }, "Adicionar arma")),
         painel("p-eq", "", pct(245, 985, 925, 1165),
           h("div", { class: "eq-topo" }, h("span", {}, h("b", {}, "Armadura: "), arm ? arm.nome : "—", " · ", h("b", {}, "Escudo: "), esc ? esc.nome : "—"), dinheiro),
           h("ul", { class: "itens" }, f.equip.map((e, i) => h("li", {}, numIn(e.qtd, (v) => mut(() => { e.qtd = v; if (v <= 0) f.equip.splice(i, 1); }), { min: 0, rotulo: "Quantidade de " + e.nome }), h("span", {}, e.nome)))),
-          h("button", { class: "btn peq", onclick: () => modalEquip("Itens") }, "＋ Equipamento")));
+          h("button", { class: "btn peq", onclick: () => modalEquip("Itens") }, "Adicionar equipamento")));
 
       const rots = [[".p-nome", "Nome"], [".p-retrato", "Retrato"], ["textarea.campo-area", "Descrição"], [".p-prof", "Profissões"], [".p-tal", "Talentos"], [".p-mag", "Magia"], [".p-est", "Estado"], [".p-arm", "Armas"], [".p-eq", "Equipamento"]];
       rots.forEach(([sel, r]) => { const el = ficha.querySelector(sel); const alvo = el && (el.classList.contains("p") ? el : el.closest(".p")); if (alvo) alvo.dataset.rot = r; });
       const bs = ficha.querySelectorAll(".btn-campo"); ["Ancestralidade", "Novato", "Especialista", "Mestre"].forEach((r, i) => bs[i] && (bs[i].closest(".p").dataset.rot = r));
       ficha.querySelector(".btn-campo").closest(".p").append(h("label", { class: "so-mobile" }, "Nível ", numIn(f.nivel, (v) => mut(() => (f.nivel = Math.max(0, Math.min(10, v)))), { min: 0, max: 10, rotulo: "Nível do personagem" })));
       const barra = h("header", { class: "barra" },
-        h("a", { class: "voltar", href: "#/" }, "← Fichas"), h("div", { class: "barra-acoes" },
-          h("button", { class: "btn peq", onclick: () => S.painelDados() }, "🎲 Dados"), h("button", { class: "btn peq", onclick: modalDescanso }, "Descanso"), h("button", { class: "btn peq", onclick: modalAjustes }, "Ajustes"),
-          h("button", { class: "btn peq", onclick: modalNotas }, "Notas"), h("button", { class: "btn peq", onclick: () => S.fichas.exportar([f], (f.nome || "ficha") + ".sdl.json") }, "Exportar"),
-          h("button", { class: "btn peq", onclick: () => print() }, "Imprimir"), S.tema.botao()));
+        h("div", { class: "barra-esq" }, h("a", { class: "voltar", href: "#/" }, h("span", { html: S.icone.voltar }), "Fichas"),
+          h("div", { class: "marca-mini" }, h("img", { src: "assets/icon.svg", alt: "" }), h("span", {}, f.nome || "Personagem sem nome"))),
+        h("nav", { class: "nav", "aria-label": "Ações da ficha" },
+          h("button", { class: "nav-b", onclick: () => S.painelDados() }, "Dados"), h("button", { class: "nav-b", onclick: modalDescanso }, "Descanso"), h("button", { class: "nav-b", onclick: modalAjustes }, "Ajustes"),
+          h("button", { class: "nav-b", onclick: modalNotas }, "Notas"), h("button", { class: "nav-b", onclick: () => S.fichas.exportar([f], (f.nome || "ficha") + ".sdl.json") }, "Exportar"), S.tema.botao()));
       const frag = document.createDocumentFragment();
       frag.append(barra, h("main", { class: "ficha-wrap" }, ficha, h("p", { class: "rodape-ficha" }, "Layout inspirado na ficha do Livro Básico de Shadow of the Demon Lord. Clique nos círculos de atributos para rolar desafios.")));
       return frag;

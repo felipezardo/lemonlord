@@ -23,10 +23,11 @@
       };
       return h("div", { class: "home" },
         h("header", { class: "barra" }, h("div", { class: "marca" }, h("img", { src: "assets/icon.svg", alt: "", class: "marca-ic" }), h("div", {}, h("h1", {}, "Shadow of the Demon Lord"), h("small", {}, "Fichas de personagem"))),
-          h("div", { class: "barra-acoes" }, h("button", { class: "btn peq", onclick: () => S.painelDados() }, "🎲 Dados"), S.tema.botao())),
+          h("nav", { class: "nav", "aria-label": "Ferramentas" }, h("button", { class: "nav-b", onclick: () => S.painelDados() }, "Dados"), S.tema.botao())),
         h("main", { class: "home-corpo" },
+          h("div", { class: "home-titulo" }, h("h2", {}, "Seus personagens"), h("p", {}, fichas.length ? fichas.length + (fichas.length === 1 ? " ficha guardada" : " fichas guardadas") : "Nenhuma ficha ainda")),
           h("div", { class: "home-acoes" },
-            h("button", { class: "btn primario grande", onclick: () => { const f = S.fichas.nova(); S.fichas.salvar(f); location.hash = "#/ficha/" + f.id; } }, "＋ Nova ficha"),
+            h("button", { class: "btn primario grande", onclick: () => { const f = S.fichas.nova(); S.fichas.salvar(f); location.hash = "#/ficha/" + f.id; } }, "Nova ficha"),
             h("button", { class: "btn", onclick: () => arq.click() }, "Importar"), arq,
             h("button", { class: "btn", disabled: !fichas.length, onclick: () => S.fichas.exportar(fichas, "fichas-sdl.json") }, "Exportar todas")),
           fichas.length ? h("div", { class: "grade-fichas" }, fichas.map(card)) : h("div", { class: "vazio" }, h("img", { src: "assets/icon.svg", alt: "" }), h("p", {}, "Nenhuma ficha ainda. Crie seu primeiro personagem ou importe um arquivo."))),

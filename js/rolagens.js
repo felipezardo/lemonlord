@@ -55,6 +55,7 @@
     let modBase = mod != null ? mod : attr ? calc.mod(attr) : 0;
     const quandoAtq = tipo === "ataque" ? (arma ? "ataque-arma" : "ataque") : "desafio";
     const efs = efeitosAtivos(calc, quandoAtq, attr).concat(tipo === "ataque" ? efeitosAtivos(calc, "ataque", attr).filter((e) => quandoAtq !== "ataque") : []);
+    if (tipo === "desafio" && calc.mag.trevasN) efs.push({ quando: "desafio", dadivas: calc.mag.trevasN, auto: false, talento: "Magia das trevas", rotulo: `Evitar Insanidade: magia das trevas aprendida (${calc.mag.trevasN} dádiva${calc.mag.trevasN > 1 ? "s" : ""})` });
     const dmgEfs = tipo === "ataque" && (arma || feitico) ? efeitosAtivos(calc, "dano-arma") : [];
     const danoFeit = feitico ? ((/(\d+d\d+(?:\s*\+\s*\d+)?)\s+de\s+dano/i.exec(feitico.texto) || [])[1] || "") : "";
     const arma0 = arma || (danoFeit ? { nome: feitico.nome, dano: danoFeit } : null);

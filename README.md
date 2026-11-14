@@ -24,6 +24,9 @@ Abra `index.html` no navegador (funciona offline; as fontes web são opcionais).
 - Magia das trevas: +1 Corrupção ao descobrir a tradição e teste de d6 ao aprender feitiços.
 - Efeitos de talentos: `SDL.efeitos` (manual) tem prioridade; os demais são inferidos do texto (dádivas em ataque/desafio, dano extra) e aparecem como opções nas janelas de rolagem.
 
+## Avisos em vez de bloqueios
+O site não impede escolhas: quando algo parece fora das regras (feitiço acima do Poder, vagas de magia excedidas ou fora da restrição de trilha/religião, requisito de armadura/arma, atributos a mais, trilha sem o nível necessário) ele mostra **Avisos** (botão no painel de estado) e notas nas janelas de Magia. Regra de magia: descobrir uma tradição concede um feitiço de grau 0 dela (o Truque do Magista concede mais um), fora das vagas das trilhas.
+
 ## Fidelidade textual
 Todos os textos de regras (ancestralidades, trilhas, talentos, feitiços, poções, inscrições, regra de trilha secundária) são extraídos do PDF por scripts em `tools/` e conferidos por auditoria de letras (`tools/audit2.py`, `tools/verifica_anc.py`). Tabelas de equipamento foram conferidas visualmente contra as páginas do livro. A remoção de hifenização usa o vocabulário do próprio livro (`tools/vocab.json`) para preservar hifens legítimos (ex.: "ouvi-lo", "mortas-vivas").
 
