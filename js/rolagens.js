@@ -14,13 +14,53 @@
   }
   S.contador = contador;
 
-  function resultado(r) {
+  /* ---------- dados animados ---------- */
+  const NS = "http://www.w3.org/2000/svg";
+  function dadoEl(f, papel) {
+    const d20 = f === 20, quad = f === 6 || f === 3;
+    const forma = d20 ? '<path class="d-forma" d="M50 4 L92 28 L92 72 L50 96 L8 72 L8 28 Z"/><path class="d-int" d="M50 24 L77 66 L23 66 Z M50 4 L50 24 M92 72 L77 66 M8 72 L23 66"/>'
+      : quad ? '<rect class="d-forma" x="10" y="10" width="80" height="80"/>' : '<path class="d-forma" d="M50 4 L92 38 L76 92 L24 92 L8 38 Z"/>';
+    const el = h("div", { class: "dado d" + (d20 ? "20" : quad ? "6" : "x") + (papel ? " " + papel : ""), "data-f": f });
+    el.innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true">${forma}<text class="d-num" x="50" y="${d20 ? 60 : 62}">?</text></svg>`;
+    return el;
+  }
+  const semMovimento = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function mesa(r) {
+    const lista = [];
+    if (r.tipo === "d20") { lista.push({ f: 20, v: r.base, papel: "base" }); const mx = r.extra.length ? Math.max(...r.extra) : 0; let achou = false;
+      r.extra.forEach((v) => { const esc = v === mx && !achou; if (esc) achou = true; lista.push({ f: 6, v, papel: (r.liq > 0 ? "dadiva" : "reves") + (esc ? " escolhido" : " descartado") }); }); }
+    else (r.dados || []).slice(0, 14).forEach((d) => lista.push({ f: d.f, v: d.v, papel: d.s < 0 ? "reves" : "" }));
+    const box = h("div", { class: "mesa" });
+    const els = lista.map((d, i) => { const e = dadoEl(d.f, d.papel); e.style.setProperty("--atraso", i * 0.11 + "s"); e.style.setProperty("--dur", 0.85 + i * 0.06 + "s"); box.append(e); return { e, d, i }; });
+    return { box, els };
+  }
+  function animar(m, aoFim) {
+    const reduz = semMovimento(); let restantes = m.els.length;
+    if (!restantes) return aoFim();
+    m.els.forEach(({ e, d, i }) => {
+      const num = e.querySelector(".d-num"), fim = (reduz ? 0 : 850 + i * 110 + i * 60);
+      const fecha = () => { num.textContent = d.v; e.classList.add("final"); void e.offsetWidth; e.classList.add("assenta"); if (--restantes === 0) setTimeout(aoFim, reduz ? 0 : 160); };
+      if (reduz) return fecha();
+      e.classList.add("rolando"); const ini = Date.now();
+      const iv = setInterval(() => {
+        if (!e.isConnected) return clearInterval(iv);
+        if (Date.now() - ini >= fim) { clearInterval(iv); e.classList.remove("rolando"); fecha(); } else num.textContent = 1 + Math.floor(Math.random() * d.f);
+      }, 55);
+    });
+  }
+  function contar(el, alvo) {
+    if (semMovimento()) { el.textContent = alvo; return; }
+    const t0 = performance.now(), dur = 420, de = Math.min(0, alvo);
+    const passo = (t) => { const k = Math.min(1, (t - t0) / dur); el.textContent = Math.round(de + (alvo - de) * (1 - Math.pow(1 - k, 3))); if (k < 1 && el.isConnected) requestAnimationFrame(passo); };
+    requestAnimationFrame(passo);
+  }
+  function resultado(r, aoFim) {
     const cls = r.tipo === "expr" ? "" : r.critico ? "crit" : r.falha ? "falha1" : "";
-    return h("div", { class: "resultado " + (r.sucesso === true ? "ok " : r.sucesso === false ? "ruim " : "") + cls },
-      h("div", { class: "res-total" }, r.total),
-      h("div", { class: "res-det" }, S.descrever(r)),
-      r.tipo === "d20" && r.critico ? h("div", { class: "res-nota" }, "20 natural") : null,
-      r.tipo === "d20" && r.falha ? h("div", { class: "res-nota" }, "1 natural") : null);
+    const m = mesa(r), total = h("div", { class: "res-total" }, "·"), det = h("div", { class: "res-det" }, S.descrever(r));
+    const notas = h("div", { class: "res-notas" }, r.tipo === "d20" && r.critico ? h("div", { class: "res-nota" }, "20 natural") : null, r.tipo === "d20" && r.falha ? h("div", { class: "res-nota" }, "1 natural") : null);
+    const raiz = h("div", { class: "resultado aguardando " + cls }, m.box, total, det, notas);
+    animar(m, () => { raiz.classList.remove("aguardando"); raiz.classList.add("pronto", r.sucesso === true ? "ok" : r.sucesso === false ? "ruim" : "semalvo"); contar(total, r.total); if (aoFim) aoFim(); m.els.forEach(({ e }) => { if (cls === "crit" && e.classList.contains("base")) e.classList.add("crit"); if (cls === "falha1" && e.classList.contains("base")) e.classList.add("falha1"); }); });
+    return raiz;
   }
 
   /* efeitos de talentos aplicáveis: tabela manual (SDL.efeitos) + inferência a partir do texto oficial */
@@ -78,8 +118,8 @@
       let dad = cDad.get() + autoDad, ext = [];
       for (const e of efs) if (!e.auto && marcados.has(e._id)) { dad += e.dadivas || 0; if (e.extra) ext.push(e.extra); }
       const r = S.dados.d20({ mod: modBase + (+inBonus.value || 0), dadivas: dad, reveses: cRev.get() + autoRev.length, alvo: inAlvo.value === "" ? null : +inAlvo.value, rotulo: titulo });
-      r.extraAtq = ext; ultimo = r; S.registrar(r);
-      saida.replaceChildren(resultado(r));
+      r.extraAtq = ext; ultimo = r;
+      saida.replaceChildren(resultado(r, () => S.registrar(r)));
       if (tipo === "ataque" && arma0) saida.append(h("button", { class: "btn primario", onclick: rolarDano }, "Rolar dano"));
     };
     const rolarDano = () => {
@@ -88,8 +128,8 @@
       for (const e of dmgEfs) if (e.extra && (e.auto || marcados.has(e._id))) { partes.push(ex1(e)); nomes.push(e.talento); }
       for (const e of efs) if (!e.auto && marcados.has(e._id) && e.extra && e.quando.startsWith("ataque")) { partes.push(ex1(e)); nomes.push(e.talento); }
       const ex = S.dados.expr(partes.join("+")); if (!ex) return;
-      const r = { tipo: "expr", rotulo: "Dano — " + arma0.nome, total: ex.total, det: ex.det, quando: Date.now() }; S.registrar(r);
-      saida.append(h("div", { class: "dano-res" }, resultado(r), nomes.length ? h("small", {}, "Inclui: " + nomes.join(", ")) : null));
+      const r = { tipo: "expr", rotulo: "Dano — " + arma0.nome, total: ex.total, det: ex.det, dados: ex.dados, quando: Date.now() };
+      saida.append(h("div", { class: "dano-res" }, resultado(r, () => S.registrar(r)), nomes.length ? h("small", {}, "Inclui: " + nomes.join(", ")) : null));
     };
     const corpo = h("div", { class: "rolagem" },
       h("p", { class: "dica" }, tipo === "ataque" ? "Rolagem de ataque (d20 + modificador contra a Defesa ou atributo do alvo)." : "Rolagem de desafio (d20 + modificador; número-alvo padrão 10)."),
@@ -107,7 +147,7 @@
     const lista = h("ol", { class: "hist" });
     const atualizar = () => lista.replaceChildren(...S.historico.slice(0, 15).map((r) => h("li", { class: r.sucesso === true ? "ok" : r.sucesso === false ? "ruim" : "" }, h("b", {}, r.total), " ", h("span", {}, S.descrever(r)))));
     const saida = h("div", { class: "saida" });
-    const mostrar = (r) => { S.registrar(r); saida.replaceChildren(resultado(r)); };
+    const mostrar = (r) => { saida.replaceChildren(resultado(r, () => S.registrar(r))); };
     const rapido = (txt) => { const ex = S.dados.expr(txt); mostrar({ tipo: "expr", rotulo: txt, ...ex, quando: Date.now() }); };
     const inExpr = h("input", { type: "text", class: "expr", placeholder: "ex.: 2d6+3", "aria-label": "Expressão de dados", autocomplete: "off",
       onkeydown: (e) => { if (e.key === "Enter") go(); } });
@@ -115,7 +155,7 @@
     const cD = contador("Dádivas", 0, 0, 9), cR = contador("Reveses", 0, 0, 9);
     const inMod = h("input", { type: "number", class: "num", value: 0, "aria-label": "Modificador" }), inAlvo = h("input", { type: "number", class: "num", placeholder: "—", "aria-label": "Número-alvo" });
     const corpo = h("div", { class: "painel-dados" },
-      h("div", { class: "rapidos" }, ["d20", "d6", "2d6", "3d6", "d3"].map((t) => h("button", { class: "btn dado", onclick: () => rapido(t) }, t))),
+      h("div", { class: "rapidos" }, ["d20", "d6", "2d6", "3d6", "d3"].map((t) => h("button", { class: "btn btn-dado", onclick: () => rapido(t) }, t))),
       h("div", { class: "linha" }, inExpr, h("button", { class: "btn primario", onclick: go }, "Rolar")),
       h("fieldset", { class: "condicoes" }, h("legend", {}, "d20 com dádivas e reveses"),
         h("div", { class: "linha" }, h("label", {}, "Mod.", inMod), h("label", {}, "Alvo", inAlvo)), h("div", { class: "linha" }, cD, cR),

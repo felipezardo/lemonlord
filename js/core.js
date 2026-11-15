@@ -282,16 +282,16 @@ window.SDL = window.SDL || {};
     expr(txt) {
       const t = txt.replace(/\s+/g, "").toLowerCase().replace(/−/g, "-");
       if (!/^[+-]?(\d*d\d+|\d+)([+-](\d*d\d+|\d+))*$/.test(t)) return null;
-      const partes = t.match(/[+-]?(\d*d\d+|\d+)/g); let total = 0; const det = [];
+      const partes = t.match(/[+-]?(\d*d\d+|\d+)/g); let total = 0; const det = []; const dados = [];
       for (const p of partes) {
         const s = p.startsWith("-") ? -1 : 1; const q = p.replace(/^[+-]/, "");
         if (q.includes("d")) {
           const [nn, ff] = q.split("d"); const n = +nn || 1, f = +ff; if (n > 100 || f > 1000) return null;
-          const rs = Array.from({ length: n }, () => d(f)); const sub = rs.reduce((a, b) => a + b, 0); total += s * sub;
+          const rs = Array.from({ length: n }, () => d(f)); const sub = rs.reduce((a, b) => a + b, 0); total += s * sub; rs.forEach((v) => dados.push({ f, v, s }));
           det.push(`${s < 0 ? "−" : ""}${n}d${f} [${rs.join(", ")}]`);
         } else { total += s * +q; det.push((s < 0 ? "−" : "") + q); }
       }
-      return { total, det: det.join(" + ") };
+      return { total, det: det.join(" + "), dados };
     },
     /* Rolagem de d20 com dádivas/reveses (regra: d6 por dádiva/revés, usa o maior; se anulam 1 a 1). */
     d20({ mod = 0, dadivas = 0, reveses = 0, alvo = null, rotulo = "" }) {

@@ -85,7 +85,7 @@ button.card-op:hover,.card-op.sel{border-color:var(--verm)}.card-op.sel{box-shad
 .checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:.4rem}.check{display:flex;gap:.5rem;align-items:center}.grade-aj{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.6rem}.grade-aj label{display:flex;flex-direction:column;gap:.2rem}
 /* dados */
 .contador{display:flex;align-items:center;gap:.4rem}.cont-v{min-width:1.5em;text-align:center;font-weight:700}
-.rapidos{display:flex;gap:.4rem;flex-wrap:wrap}.btn.dado{font-family:var(--tit);min-width:56px}
+.rapidos{display:flex;gap:.4rem;flex-wrap:wrap}.btn.btn-dado{font-family:var(--tit);min-width:56px}
 .resultado{text-align:center;border:2px solid var(--borda);border-radius:8px;padding:.7rem;margin:.4rem 0;animation:pop .25s}.resultado.ok{border-color:#3a8a4a}.resultado.ruim{border-color:var(--verm)}
 .resultado.crit .res-total{color:#d9a400}.res-total{font:700 2.6rem var(--tit)}.res-det{color:var(--tinta2);font-size:.95rem}.res-nota{font-size:.8rem;text-transform:uppercase;letter-spacing:.1em;color:var(--verm)}
 @keyframes pop{from{transform:scale(.85);opacity:.3}}
@@ -223,3 +223,48 @@ button.card-op:hover,.card-op:hover{transform:translateY(-2px);box-shadow:0 8px 
 .op-tal summary{transition:color .2s}.op-tal summary:hover{color:var(--verm)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (max-width:760px){.nav{flex-wrap:wrap;overflow:visible;margin:0;row-gap:0}.nav-b{padding:.45rem .6rem}.tema-switch{margin:.3rem 0 .3rem auto}}
+/* ===================== Dados animados ===================== */
+.resultado{position:relative;isolation:isolate;border:0;padding:.8rem .6rem 1rem;margin:.6rem 0;animation:none;background:color-mix(in srgb,var(--papel2) 45%,transparent)}
+.resultado::before{content:"";position:absolute;inset:0;z-index:-1;border:2px solid var(--borda);filter:url(#rugoso);transition:border-color .4s}
+.resultado.pronto.ok::before{border-color:#3d7a4a}.resultado.pronto.ruim::before,.resultado.pronto.semalvo::before{border-color:var(--verm)}
+.resultado.crit.pronto::before{border-color:#d9a400;animation:brilho 1.2s ease-out}
+.mesa{display:flex;flex-wrap:wrap;gap:.7rem 1rem;justify-content:center;align-items:flex-end;min-height:96px;padding:.4rem 0 .6rem;perspective:700px}
+.dado{width:86px;height:86px;color:var(--verm);animation:rolar var(--dur,.9s) cubic-bezier(.3,.7,.3,1) var(--atraso,0s) both;filter:drop-shadow(0 6px 5px #0004)}
+.dado.d6,.dado.dx{width:56px;height:56px}.dado svg{width:100%;height:100%;overflow:visible}
+.d-forma{fill:color-mix(in srgb,var(--papel) 92%,transparent);stroke:currentColor;stroke-width:3.4;stroke-linejoin:miter;transition:fill .3s}
+.d-int{fill:none;stroke:currentColor;stroke-width:1.6;opacity:.65}
+.d-num{font:700 30px var(--tit);fill:var(--tinta);text-anchor:middle;transition:fill .3s}
+.dado.d6 .d-num,.dado.dx .d-num{font-size:34px}
+.dado.rolando .d-num{opacity:.55}
+.dado.final{animation:none}.dado.assenta{animation:assenta .38s cubic-bezier(.3,1.6,.5,1)}
+.dado.reves .d-forma{stroke:var(--tinta2);stroke-dasharray:6 3}.dado.reves{color:var(--tinta2)}
+.dado.descartado{opacity:.42;transform:scale(.82);transition:opacity .4s .15s,transform .4s .15s;filter:none}
+.dado.escolhido{transition:transform .4s;transform:translateY(-4px) scale(1.06)}.dado.escolhido .d-forma{fill:color-mix(in srgb,var(--verm) 18%,var(--papel))}
+.dado.crit .d-forma{fill:#d9a40033;stroke:#d9a400}.dado.crit{animation:brilho 1.2s ease-out}
+.dado.falha1{animation:treme .45s}.dado.falha1 .d-forma{fill:color-mix(in srgb,var(--verm) 30%,var(--papel))}
+@keyframes rolar{0%{opacity:0;transform:translate(-60px,-90px) rotate(-260deg) scale(.45)}22%{opacity:1;transform:translate(-14px,0) rotate(60deg) scale(1.08)}38%{transform:translate(12px,-30px) rotate(170deg) scale(1)}54%{transform:translate(-6px,0) rotate(250deg)}68%{transform:translate(5px,-12px) rotate(310deg)}82%{transform:translate(-2px,0) rotate(345deg)}100%{transform:translate(0,0) rotate(360deg)}}
+@keyframes assenta{0%{transform:scale(1.18) rotate(-4deg)}60%{transform:scale(.96) rotate(1deg)}100%{transform:none}}
+@keyframes treme{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px) rotate(-3deg)}40%{transform:translateX(6px) rotate(3deg)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+@keyframes brilho{0%{filter:drop-shadow(0 0 0 #d9a400)}35%{filter:drop-shadow(0 0 16px #d9a400)}100%{filter:drop-shadow(0 6px 5px #0004)}}
+.res-total{font:400 3.2rem/1 var(--tit);text-align:center;opacity:0;transform:scale(1.6) rotate(-3deg);transition:opacity .25s,transform .4s cubic-bezier(.3,1.5,.5,1)}
+.resultado.pronto .res-total{opacity:1;transform:none}
+.res-det,.res-notas{opacity:0;transform:translateY(6px);transition:opacity .4s .25s,transform .4s .25s}.resultado.pronto .res-det,.resultado.pronto .res-notas{opacity:1;transform:none}
+.res-det{text-align:center;color:var(--tinta2);margin-top:.3rem}
+.res-nota{text-align:center;font:400 .82rem var(--cap);letter-spacing:.2em;text-transform:uppercase;color:var(--verm)}
+.dano-res{margin-top:.8rem}.dano-res .dado{width:60px;height:60px}.dano-res .dado.d20{width:76px;height:76px}
+/* ===================== Marcas de uso (tinta) ===================== */
+.marcas{display:inline-flex;gap:.35rem;align-items:center;flex-wrap:wrap}
+.marca{position:relative;isolation:isolate;flex:none;width:19px;height:19px;padding:0;border:0;background:transparent;color:var(--verm);cursor:pointer;transition:transform .15s}
+.marca::before{content:"";position:absolute;inset:0;z-index:-1;border:1.6px solid currentColor;filter:url(#tinta);transition:transform .25s,opacity .25s,background .25s}
+.marca:hover::before{transform:rotate(-5deg) scale(1.14);background:color-mix(in srgb,var(--verm) 14%,transparent)}.marca:active{transform:scale(.88)}
+.marca svg{position:absolute;inset:-3px;width:calc(100% + 6px);height:calc(100% + 6px);overflow:visible;pointer-events:none}
+.marca path{fill:none;stroke:currentColor;stroke-width:2.7;stroke-linecap:round;stroke-dasharray:19;stroke-dashoffset:19;transition:stroke-dashoffset .26s ease-out}
+.marca path+path{transition-delay:.13s}
+.marca.usada::before{opacity:.55}.marca.usada path{stroke-dashoffset:0}
+.marca:not(.usada) path{transition-delay:0s}.marca:not(.usada) path+path{transition-delay:0s}
+.tal{align-items:center;gap:.6em}.tal-n{background:linear-gradient(var(--verm),var(--verm)) left bottom/0 1px no-repeat,linear-gradient(var(--verm),var(--verm)) left 58%/0 2px no-repeat;transition:background-size .4s ease,color .3s,opacity .3s}
+.tal-n:hover{background-size:100% 1px,0 2px}
+.tal.usado .tal-n{background-size:0 1px,100% 2px;color:var(--tinta2);opacity:.75}
+.usos-linha{display:flex;align-items:center;gap:.8rem;padding:.5rem 0;border-top:1px dotted var(--borda);border-bottom:1px dotted var(--borda)}.usos-linha>span{font:400 .85rem var(--cap);letter-spacing:.12em;text-transform:uppercase;color:var(--verm)}
+.lista-mag li{display:flex;align-items:center;gap:.5em}.lista-mag .marcas{margin-left:auto}.lista-mag .grau,.sem-conj{color:var(--tinta2);font-size:.8em;white-space:nowrap}
+@media (prefers-reduced-motion:reduce){.dado,.dado.assenta,.dado.crit,.dado.falha1{animation:none!important}.res-total,.res-det,.res-notas{transition:none}}

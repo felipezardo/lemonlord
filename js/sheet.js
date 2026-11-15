@@ -119,7 +119,7 @@
     }
 
     function modalTalento(t) {
-      S.modal({ titulo: t.n, largura: "md", aoFechar: salvar, corpo: h("div", {}, h("p", { class: "dica" }, t.fonte), h("p", { class: "texto-feit" }, t.t), (() => { const ef = S.efeitosDe(t).filter((e) => !e.auto), bn = t.bonus || []; const bl = [];
+      S.modal({ titulo: t.n, largura: "md", aoFechar: salvar, corpo: h("div", {}, h("p", { class: "dica" }, t.fonte), h("p", { class: "texto-feit" }, t.t), /descanso/i.test(t.t) ? h("div", { class: "usos-linha" }, h("span", {}, "Usos (restaurados no descanso)"), marcasUso({ max: usosMax(t), obter: () => usosGet(t.n), definir: (v) => (f.usados[t.n] = v), rotulo: t.n })) : null, (() => { const ef = S.efeitosDe(t).filter((e) => !e.auto), bn = t.bonus || []; const bl = [];
           if (ef.length) bl.push(h("label", { class: "check" }, h("input", { type: "checkbox", checked: !!f.efAtivos[t.n], onchange: (e) => (f.efAtivos[t.n] = e.target.checked) }), `Aplicar sempre nas rolagens (${ef.map((e) => e.quando.replace("-arma", " com arma") + (e.dadivas ? " +" + e.dadivas + " dádiva" : "") + (e.extra ? " +" + e.extra.replace("@poder", "Poder") + " dano" : "")).join("; ")})`));
           if (bn.length) bl.push(h("label", { class: "check" }, h("input", { type: "checkbox", checked: !!f.bonusAtivo[t.n], onchange: (e) => (f.bonusAtivo[t.n] = e.target.checked) }), `Aplicar bônus à ficha: ${bn.map((b) => b.k + " +" + b.v).join(", ")}`));
           return bl.length ? h("fieldset", { class: "condicoes" }, h("legend", {}, "Automação opcional"), bl) : null; })(),
@@ -221,6 +221,17 @@
         acoes: [{ texto: "Cancelar" }, { texto: "8 horas", classe: "primario", fn: () => aplicar(1) }, { texto: "24 horas", classe: "primario", fn: () => aplicar(2) }] });
     }
 
+    /* marcas de uso: caixinhas de tinta que se riscam com um X; atualizam no lugar, sem redesenhar a ficha */
+    const X_SVG = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4.5 L16 15.5"/><path d="M16 4 L4.5 16"/></svg>';
+    function marcasUso({ max, obter, definir, rotulo, aoMudar }) {
+      const bt = Array.from({ length: max }, (_, i) => h("button", { type: "button", class: "marca", html: X_SVG, onclick: () => { const u = obter(); definir(i < u ? u - 1 : Math.min(max, u + 1)); aplicar(); salvar(); } }));
+      const el = h("span", { class: "marcas", role: "group", "aria-label": rotulo }, bt);
+      function aplicar() { const u = obter(); bt.forEach((b, i) => { b.classList.toggle("usada", i < u); b.setAttribute("aria-pressed", i < u); b.setAttribute("aria-label", `${rotulo}: uso ${i + 1} ${i < u ? "gasto (clique para recuperar)" : "disponível (clique para marcar como usado)"}`); b.title = i < u ? "Usado — clique para recuperar" : "Disponível — clique para marcar como usado"; }); aoMudar && aoMudar(u); }
+      aplicar(); return el;
+    }
+    const usosMax = (t) => (/(vezes igual ao seu Poder|vezes igual ao Poder)/i.test(t.t) ? Math.max(1, calc.poder) : 1);
+    const usosGet = (n) => { const v = f.usados[n]; return v === true ? 1 : +v || 0; };
+
     /* ---------- rolagens ---------- */
     const rolar = (k) => S.rolarContexto({ calc, titulo: "Desafio de " + (S.ATR_NOME[k] || "Percepção"), tipo: "desafio", attr: k });
     const atacar = (a) => {
@@ -238,9 +249,10 @@
         return h("div", { class: "p trilha", style: tier === "novato" ? pct(350, 106, 590, 136) : tier === "especialista" ? pct(350, 171, 590, 201) : pct(350, 244, 590, 274) },
           h("button", { class: "btn-campo" + (t ? "" : " sem-valor"), title: bloq ? `Benefícios a partir do nível ${min}` : "", onclick: () => modalTrilha(tier, rot) }, t ? t.nome : "Escolher" + (bloq ? ` (nível ${min})` : ""))); };
 
-      const nomeTal = (t) => { const lim = /descanso/i.test(t.t); const usado = f.usados[t.n];
-        return h("li", { class: "tal" + (usado ? " usado" : "") }, h("button", { class: "tal-n", onclick: () => modalTalento(t) }, t.n),
-          lim ? h("button", { class: "tal-u", "aria-pressed": !!usado, title: "Marcar como usado (restaura no descanso)", onclick: () => mut(() => (f.usados[t.n] = !f.usados[t.n])) }, usado ? "usado" : "◯") : null); };
+      const nomeTal = (t) => { const lim = /descanso/i.test(t.t); const max = usosMax(t);
+        const li = h("li", { class: "tal" }, h("button", { class: "tal-n", onclick: () => modalTalento(t) }, t.n));
+        if (lim) li.append(marcasUso({ max, obter: () => usosGet(t.n), definir: (v) => (f.usados[t.n] = v), rotulo: t.n, aoMudar: (u) => li.classList.toggle("usado", u >= max) }));
+        return li; };
       const grupos = {}; c.tal.forEach((t) => (grupos[t.fonte] = grupos[t.fonte] || []).push(t));
 
       const dinheiro = h("div", { class: "dinheiro" }, [["co", "co"], ["xp", "xp"], ["cc", "cc"]].map(([k, n]) => h("label", {}, n, numIn(f.dinheiro[k], (v) => { f.dinheiro[k] = Math.max(0, v); salvar(); }, { min: 0, rotulo: "Moedas " + n }))));
@@ -286,8 +298,9 @@
           h("button", { class: "btn peq", onclick: modalNovoTalento }, "Adicionar talento")),
         painel("p-mag", "", pct(705, 345, 922, 915),
           h("ul", { class: "chips" }, f.tradicoes.map((t) => h("li", { class: "chip" }, t))),
-          h("ul", { class: "lista-mag" }, c.feiticos.slice().sort((a, b) => a.grau - b.grau).map((m) => { const tot = c.casts(m.grau), g = f.conj[m.uid || m.id] || 0;
-            return h("li", {}, h("button", { class: "tal-n", title: "Abrir feitiço", onclick: () => modalFeitico(m) }, m.nome), h("span", { class: "pips", role: "img", "aria-label": `${Math.max(0, tot - g)} de ${tot} conjurações` }, Array.from({ length: Math.max(0, tot - g) }, () => h("i", { class: "pip cheio" })), Array.from({ length: Math.min(g, tot) }, () => h("i", { class: "pip" })), h("small", {}, " grau " + m.grau))); })),
+          h("ul", { class: "lista-mag" }, c.feiticos.slice().sort((a, b) => a.grau - b.grau).map((m) => { const tot = c.casts(m.grau), chave = m.uid || m.id;
+            return h("li", {}, h("button", { class: "tal-n", title: "Abrir feitiço", onclick: () => modalFeitico(m) }, m.nome),
+              tot ? marcasUso({ max: tot, obter: () => Math.min(tot, f.conj[chave] || 0), definir: (v) => (f.conj[chave] = v), rotulo: `Conjurações de ${m.nome}` }) : h("small", { class: "sem-conj" }, "sem conjurações"), h("small", { class: "grau" }, "grau " + m.grau)); })),
           h("button", { class: "btn peq", onclick: () => modalMagia() }, "Magia…")),
         painel("p-est", "", pct(240, 868, 690, 975), h("div", { class: "linha-est" },
           h("button", { class: "btn peq", onclick: modalAflicoes }, "Aflições"), h("button", { class: "btn peq" + (c.avisos.some((x) => x.n === "alerta") ? " perigo" : ""), onclick: modalAvisos }, `Avisos (${c.avisos.length})`), f.aflicoes.length ? f.aflicoes.map((a) => h("span", { class: "chip aflicao" }, a)) : h("small", {}, "nenhuma"))),
