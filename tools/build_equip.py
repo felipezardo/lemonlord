@@ -1,6 +1,7 @@
 import subprocess,re,json
 from build_paths import tokens
-F="/mnt/user-data/uploads/SDL___-___Basico-Edicao-Revisada-v1_02.pdf"
+import os
+F=os.environ.get("SDL_PDF","/mnt/user-data/uploads/SDL___-___Basico-Edicao-Revisada-v1_02.pdf")
 txt=subprocess.run(["pdftotext","-f","105","-l","108","-layout",F,"-"],capture_output=True,text=True).stdout
 pat=re.compile(r"([A-ZÀ-Úa-zà-ú][^\d—]*?(?:\([^)]*\))?[^\d—]*?)\s+(\d[\d\.]*\+?\s(?:cc|xp|co|trocados?)\+?|—)\s+(Comum|Incomum|Raro|Exótico|Permissão do MJ)")
 rows=[]

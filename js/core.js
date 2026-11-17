@@ -27,6 +27,9 @@ window.SDL = window.SDL || {};
     x: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg>',
     voltar: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>',
   };
+  /* botão "i": mostra/oculta um texto explicativo (funciona no toque; o title cobre o hover no desktop) */
+  S.infoBtn = (alvo, rotulo) => h("button", { type: "button", class: "btn-info", "aria-label": "Mostrar ou ocultar descrição" + (rotulo ? " de " + rotulo : ""), "aria-expanded": "false", title: "Descrição",
+    onclick: (e) => { const abre = alvo.hidden; alvo.hidden = !abre; e.currentTarget.setAttribute("aria-expanded", abre); e.currentTarget.classList.toggle("aberto", abre); } }, "i");
   S.$ = (s, r) => (r || document).querySelector(s);
   S.uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   S.byId = (arr, id) => arr.find((x) => x.id === id);
@@ -273,6 +276,27 @@ window.SDL = window.SDL || {};
     if (!c.anc) A2("nota", "Ancestralidade não escolhida.");
     r.avisos = av;
     return r;
+  };
+
+  /* ---------- Suplementos (ver SUPLEMENTOS.md) ---------- */
+  S.suplementos = [];
+  const LISTAS = ["ancestralidades", "trilhas", "tradicoesInfo", "feiticos", "feiticosTrilha", "armas", "armaduras", "itens", "religioes"];
+  S.fonteDe = (x) => (x && x.fonte) || "Livro Básico";
+  S.registrarSuplemento = function (sup) {
+    if (!sup || !sup.id || !sup.nome) { console.warn("Suplemento inválido (faltam id/nome)", sup); return; }
+    if (S.suplementos.some((x) => x.id === sup.id)) { console.warn("Suplemento já registrado:", sup.id); return; }
+    const fonte = sup.abreviacao || sup.nome;
+    for (const k of LISTAS) for (const item of (sup[k] || [])) {
+      if (!Array.isArray(item) && typeof item === "object" && !item.fonte) item.fonte = fonte;
+      const alvo = S[k]; const id = Array.isArray(item) ? item[0] : item.id || item.nome;
+      if (alvo.some((x) => (Array.isArray(x) ? x[0] : x.id || x.nome) === id)) console.warn(`[${sup.id}] ${k}: identificador repetido (${id}); item ignorado.`);
+      else alvo.push(item);
+    }
+    for (const [cat, lista] of Object.entries(sup.profissoes || {})) S.profissoes[cat] = (S.profissoes[cat] || []).concat(lista.filter((p) => !(S.profissoes[cat] || []).includes(p)));
+    for (const [k, lista] of Object.entries(sup.talentosEscolha || {})) S.talentosEscolha[k] = (S.talentosEscolha[k] || []).concat(lista);
+    Object.assign(S.efeitos, sup.efeitos || {});
+    (sup.aflicoes || []).forEach((a) => { if (!S.aflicoes.includes(a)) S.aflicoes.push(a); });
+    S.suplementos.push({ id: sup.id, nome: sup.nome, abreviacao: fonte, versao: sup.versao || "1" });
   };
 
   /* ---------- Dados ---------- */

@@ -1,7 +1,8 @@
 import pdfplumber,re,json,collections,unicodedata
 from build_paths import tokens
 from build_spells import HDR
-F="/mnt/user-data/uploads/SDL___-___Basico-Edicao-Revisada-v1_02.pdf"
+import os
+F=os.environ.get("SDL_PDF","/mnt/user-data/uploads/SDL___-___Basico-Edicao-Revisada-v1_02.pdf")
 def letters(s): return collections.Counter(c for c in unicodedata.normalize("NFC",s.lower()) if c.isalpha())
 js=open("../js/data/magias.js").read()
 m=re.search(r"SDL.feiticos=(\[.*?\]);\nSDL.feiticosTrilha=(\[.*?\]);",js,re.S)

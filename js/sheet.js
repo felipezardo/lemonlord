@@ -16,35 +16,57 @@
     const mut = (fn) => { fn(); render(); };
 
     /* ---------- modais ---------- */
+    const fonteTag = (x) => (x.fonte && x.fonte !== "Livro Básico" ? h("small", { class: "fonte" }, "Fonte: " + x.fonte) : null);
+    const carTxt = (car) => Object.entries(car || {}).map(([k, v]) => `${({ vida: "Vida", defesa: "Defesa", percepcao: "Percepção", velocidade: "Velocidade", poder: "Poder", cura: "Taxa de Cura", corrupcao: "Corrupção", insanidade: "Insanidade", tamanho: "Tamanho" })[k] || k} ${S.sinal(v)}`).join(", ");
+
     function modalAncestralidade() {
-      const fecha = S.modal({ titulo: "Ancestralidade", largura: "lg", corpo: h("div", { class: "cards" }, S.ancestralidades.map((a) =>
-        h("button", { class: "card-op" + (f.anc === a.id ? " sel" : ""), onclick: () => { mut(() => { f.anc = a.id; f.ancEsc = {}; f.corrupcao = a.corrupcao; f.insanidade = a.insanidade; }); fecha(); setTimeout(modalEscolhas, 200); } },
-          h("strong", {}, a.nome), h("span", {}, a.desc),
-          h("small", {}, `For ${a.atr.forca} · Agi ${a.atr.agilidade} · Int ${a.atr.intelecto} · Von ${a.atr.vontade} · Vel ${a.velocidade}`),
-          h("small", {}, a.talentos.map((t) => t.n).join(" · "))))) });
+      let fecha;
+      const escolher = (a) => { mut(() => { f.anc = a.id; f.ancEsc = {}; f.corrupcao = a.corrupcao; f.insanidade = a.insanidade; }); fecha(); setTimeout(modalEscolhas, 200); };
+      const detalhe = (a) => S.modal({ titulo: a.nome, largura: "md", corpo: h("div", {}, fonteTag(a), h("p", {}, a.desc),
+        h("p", { class: "dica" }, `Força ${a.atr.forca} · Agilidade ${a.atr.agilidade} · Intelecto ${a.atr.intelecto} · Vontade ${a.atr.vontade} · Velocidade ${a.velocidade} · Tamanho ${a.tamanho.join(" ou ")}`),
+        h("h3", {}, "Idiomas e profissões"), h("p", {}, a.idiomas), a.talentos.map((t) => h("div", {}, h("h3", {}, t.n), h("p", { class: "texto-feit" }, t.t))),
+        h("h3", {}, "Nível 4 — " + carTxt(a.nivel4.car)), h("p", {}, a.nivel4.escolha), h("h3", {}, a.nivel4.talento.n), h("p", { class: "texto-feit" }, a.nivel4.talento.t)),
+        acoes: [{ texto: "Fechar" }, { texto: "Escolher " + a.nome, classe: "primario", fn: () => escolher(a) }] });
+      fecha = S.modal({ titulo: "Ancestralidade", largura: "lg", corpo: h("div", { class: "cards uniforme" }, S.ancestralidades.map((a) =>
+        h("div", { class: "card-op card-uni" + (f.anc === a.id ? " sel" : ""), role: "button", tabindex: "0", "aria-label": "Ver detalhes de " + a.nome, onclick: () => detalhe(a), onkeydown: (e) => { if (e.key === "Enter" && e.target === e.currentTarget) detalhe(a); } }, h("strong", {}, a.nome), fonteTag(a), h("span", { class: "teaser" }, a.desc),
+          h("small", {}, `For ${a.atr.forca} · Agi ${a.atr.agilidade} · Int ${a.atr.intelecto} · Von ${a.atr.vontade}`),
+          h("div", { class: "card-acoes" }, h("button", { class: "btn peq", onclick: (e) => { e.stopPropagation(); detalhe(a); } }, "Detalhes"), h("button", { class: "btn peq primario", onclick: (e) => { e.stopPropagation(); escolher(a); } }, f.anc === a.id ? "Escolhida" : "Escolher"))))) });
     }
 
+    /* Trilhas: lista de cartões uniformes (nome + resumo curto) e tela de detalhes com benefícios recolhíveis */
     function modalTrilha(tier, rotulo) {
-      let busca = "", fonte = tier, escolhido = S.byId(S.trilhas, f.trilhas[tier]);
-      if (escolhido && tier === "mestre" && escolhido.tier === "especialista") fonte = "especialista";
-      const lista = h("div", { class: "cards" });
+      let busca = "", fonte = tier;
+      const atual = S.byId(S.trilhas, f.trilhas[tier]);
+      if (atual && tier === "mestre" && atual.tier === "especialista") fonte = "especialista";
+      const listaV = h("div", { class: "vista-lista" }), detalheV = h("div", { class: "vista-detalhe", hidden: true });
+      const grid = h("div", { class: "cards uniforme" });
+      let fecha;
       const nota = h("details", { class: "op-tal" }, h("summary", {}, "Regra: trilha de especialista secundária (Cap. 4)"), h("p", { class: "texto-feit peq" }, S.regras.secundaria));
-      const abas = tier === "mestre" ? h("div", { class: "grupo-btn" }, [["mestre", "Trilhas de Mestre"], ["especialista", "Especialista secundária"]].map(([v, n]) => h("button", { class: "btn peq" + (fonte === v ? " primario" : ""), onclick: () => { fonte = v; desenha(); abas.querySelectorAll("button").forEach((b, i) => b.classList.toggle("primario", ["mestre", "especialista"][i] === v)); } }, n))) : null;
-      const fecha = S.modal({ titulo: "Trilha de " + rotulo, largura: "lg", corpo: h("div", {}, abas, tier === "mestre" ? nota : null,
-        h("input", { type: "search", class: "busca", placeholder: "Buscar trilha…", "aria-label": "Buscar trilha", oninput: (e) => { busca = e.target.value.toLowerCase(); desenha(); } }), lista),
-        acoes: f.trilhas[tier] ? [{ texto: "Remover trilha", classe: "perigo", fn: () => mut(() => (f.trilhas[tier] = "")) }, { texto: "Fechar" }] : [{ texto: "Fechar" }] });
+      const abas = tier === "mestre" ? h("div", { class: "grupo-btn" }, [["mestre", "Trilhas de Mestre"], ["especialista", "Especialista secundária"]].map(([v, n]) => h("button", { class: "btn peq" + (fonte === v ? " primario" : ""), "aria-pressed": fonte === v, onclick: (e) => { fonte = v; abas.querySelectorAll("button").forEach((b2) => { const ativo = b2 === e.currentTarget; b2.classList.toggle("primario", ativo); b2.setAttribute("aria-pressed", ativo); }); desenha(); } }, n))) : null;
+      const campo = h("input", { type: "search", class: "busca", placeholder: "Buscar trilha…", "aria-label": "Buscar trilha", oninput: (e) => { busca = e.target.value.toLowerCase(); desenha(); } });
+      listaV.append(...[abas, tier === "mestre" ? nota : null, campo, h("p", { class: "dica" }, "Toque em uma trilha para ver a descrição completa e os benefícios de cada nível."), grid].filter(Boolean));
+      const meta = (t) => { const ks = Object.keys(t.niv).map(Number).sort((a2, b2) => a2 - b2); return `Níveis ${ks.join(" · ")}${ks.some((k) => t.niv[k].mag) ? " · Magia" : ""}`; };
       function desenha() {
-        lista.replaceChildren(...S.trilhas.filter((t) => t.tier === fonte).filter((t) => t.nome.toLowerCase().includes(busca)).filter((t) => !(fonte === "especialista" && tier === "mestre" && t.id === f.trilhas.especialista)).map((t) => {
-          const niveis = Object.values(t.niv).sort((a, b) => a.n - b.n);
-          const secInfo = tier === "mestre" && t.tier === "especialista" ? h("small", {}, "Secundária: nível 7 = benefícios do nível 3; nível 10 = benefícios do nível 6.") : null;
-          return h("div", { class: "card-op" + (f.trilhas[tier] === t.id ? " sel" : "") },
-            h("strong", {}, t.nome), secInfo, h("span", { class: "peq" }, t.desc || ""),
-            h("details", {}, h("summary", {}, "Benefícios por nível"), niveis.map((n) => h("div", { class: "nv" },
-              h("b", {}, `Nível ${n.n}`), h("small", {}, Object.entries(n.car).map(([k, v]) => `${k} ${S.sinal(v)}`).join(", ") + (n.esc ? ` · atributos: +1 em ${n.esc}` : "")),
-              n.tal.map((x) => h("p", {}, h("b", {}, x.n + ". "), x.t))))),
-            h("button", { class: "btn primario", onclick: () => { mut(() => (f.trilhas[tier] = t.id)); fecha(); setTimeout(modalEscolhas, 200); } }, "Escolher"));
-        }));
+        const itens = S.trilhas.filter((t) => t.tier === fonte && t.nome.toLowerCase().includes(busca) && !(fonte === "especialista" && tier === "mestre" && t.id === f.trilhas.especialista));
+        grid.replaceChildren(...(itens.length ? itens.map((t) => h("button", { class: "card-op card-uni trilha-card" + (f.trilhas[tier] === t.id ? " sel" : ""), onclick: () => ver(t) },
+          h("strong", {}, t.nome), h("small", { class: "meta" }, meta(t)), fonteTag(t), h("span", { class: "teaser" }, t.desc || ""), f.trilhas[tier] === t.id ? h("em", { class: "tag-sel" }, "Escolhida") : null)) : [h("p", { class: "dica" }, "Nenhuma trilha encontrada.")]));
       }
+      function ver(t) {
+        const niveis = Object.values(t.niv).sort((a2, b2) => a2.n - b2.n);
+        const sec = tier === "mestre" && t.tier === "especialista";
+        detalheV.replaceChildren(h("div", { class: "detalhe-int" },
+          h("button", { class: "btn peq", onclick: () => { detalheV.hidden = true; listaV.hidden = false; } }, "Voltar à lista"),
+          h("h3", { class: "det-nome" }, t.nome), fonteTag(t), sec ? h("p", { class: "dica" }, "Secundária: nível 7 = benefícios do nível 3; nível 10 = benefícios do nível 6.") : null,
+          h("p", { class: "texto-feit" }, t.desc || ""),
+          h("h3", {}, "Benefícios por nível"),
+          niveis.map((n, i) => h("details", { class: "nv-det" }, h("summary", {}, h("b", {}, `Nível ${n.n}`), h("span", {}, [carTxt(n.car), n.esc ? `atributos: +1 em ${n.esc}` : "", n.tal.length ? n.tal.map((x) => x.n).join(", ") : ""].filter(Boolean).join(" · "))),
+            n.tal.map((x) => h("p", {}, h("b", {}, x.n + ". "), x.t)), n.idi ? h("p", { class: "peq" }, n.idi) : null)),
+          h("div", { class: "detalhe-acoes" }, h("button", { class: "btn", onclick: () => { detalheV.hidden = true; listaV.hidden = false; } }, "Voltar"),
+            h("button", { class: "btn primario", onclick: () => { mut(() => (f.trilhas[tier] = t.id)); fecha(); setTimeout(modalEscolhas, 200); } }, f.trilhas[tier] === t.id ? "Manter esta trilha" : "Escolher esta trilha"))));
+        listaV.hidden = true; detalheV.hidden = false; detalheV.closest(".modal-corpo").scrollTop = 0;
+      }
+      fecha = S.modal({ titulo: "Trilha de " + rotulo, largura: "lg", corpo: h("div", {}, listaV, detalheV),
+        acoes: f.trilhas[tier] ? [{ texto: "Remover trilha", classe: "perigo", fn: () => mut(() => (f.trilhas[tier] = "")) }, { texto: "Fechar" }] : [{ texto: "Fechar" }] });
       desenha();
     }
 

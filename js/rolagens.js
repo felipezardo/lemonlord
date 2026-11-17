@@ -107,11 +107,12 @@
     const inBonus = h("input", { type: "number", value: 0, class: "num", "aria-label": "Bônus extra" });
     const inAlvo = h("input", { type: "number", value: alvo != null ? alvo : tipo === "desafio" ? 10 : "", class: "num", placeholder: "—", "aria-label": "Número-alvo" });
     const saida = h("div", { class: "saida", "aria-live": "polite" });
+    const comInfo = (conteudo, e) => { if (!e.texto) return h("div", { class: "ef-linha" }, conteudo); const p = h("p", { class: "info-texto", hidden: true }, e.texto); return h("div", { class: "ef-linha" }, h("div", { class: "ef-topo" }, conteudo, S.infoBtn(p, e.talento)), p); };
     const toggles = efs.filter((e) => !e.auto).concat(dmgEfs.filter((e) => !e.auto)).map((e, i) => {
       const id = "ef" + i; e._id = id;
-      return h("label", { class: "check", title: e.texto || "" }, h("input", { type: "checkbox", onchange: (ev) => (ev.target.checked ? marcados.add(id) : marcados.delete(id)) }), e.rotulo || e.talento);
+      return comInfo(h("label", { class: "check", title: e.texto || "" }, h("input", { type: "checkbox", onchange: (ev) => (ev.target.checked ? marcados.add(id) : marcados.delete(id)) }), e.rotulo || e.talento), e);
     });
-    const autos = autoRev.map((t) => h("li", {}, t)).concat(efs.filter((e) => e.auto).concat(dmgEfs.filter((e) => e.auto)).map((e) => h("li", {}, `${e.talento}: ${e.dadivas ? e.dadivas + " dádiva" : ""}${e.extra ? "+" + e.extra + " dano" : ""}`)));
+    const autos = autoRev.map((t) => h("li", {}, t)).concat(efs.filter((e) => e.auto).concat(dmgEfs.filter((e) => e.auto)).map((e) => h("li", {}, comInfo(h("span", {}, `${e.talento}: ${e.dadivas ? e.dadivas + " dádiva" : ""}${e.extra ? "+" + e.extra.replace("@poder", "Poder") + " dano" : ""}`), e))));
     let ultimo = null;
 
     const rolarAtq = () => {

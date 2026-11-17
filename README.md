@@ -11,12 +11,8 @@ Abra `index.html` no navegador (funciona offline; as fontes web são opcionais).
 - `js/core.js` (cálculo automático, armazenamento, dados), `rolagens.js`, `retrato.js`, `sheet.js`, `home.js`, `app.js`
 - `tools/` — scripts Python usados para extrair as trilhas do PDF (pdfplumber)
 
-## Como adicionar suplementos
-**Ancestralidade:** acrescente um objeto em `SDL.ancestralidades` (ver `anao` como modelo): `atr`, `percepcao`, `vidaBonus`, `tamanho`, `velocidade`, `talentos[]`, `nivel4{car, escolha, talento}`. Campos opcionais: `escolhaAtributo:1`, `defesaFixa`.
-**Trilha:** acrescente em `SDL.trilhas` (em um novo arquivo `js/data/suplemento-x.js` com `SDL.trilhas.push(...)`, carregado em `index.html` após `trilhas.js`):
-`{id,nome,tier:"novato|especialista|mestre",desc,niv:{"3":{n:3,esc:2,car:{vida:5,defesa:1},idi:"texto",tal:[{n:"Nome",t:"Texto"}]}}}`
-`esc` = quantos atributos o jogador escolhe aumentar em 1; `car` aceita vida, defesa, percepcao, velocidade, poder, cura, corrupcao, insanidade.
-**Efeito automático em rolagens:** adicione o nome do talento em `SDL.efeitos` (`quando`: ataque-arma, ataque, desafio, dano-arma; `dadivas`, `extra`, `auto`).
+## Suplementos
+O padrão completo (fluxo, esquemas de dados, regras de automação, padrões de interface e checklist de entrega) está em **`SUPLEMENTOS.md`**. Resumo: cada suplemento é um arquivo em `js/data/suplementos/` (modelo em `_modelo.js`) listado em `indice.js`; `node tools/validar.js` valida todos os dados; os cartões mostram "Fonte: <abreviação>" para itens de suplemento.
 
 ## Magia (v1.1)
 - `js/data/magias.js`: 30 tradições (atributo associado e magia das trevas), 330 feitiços (graus 0–10), 8 feitiços exclusivos de trilha, tabela de Conjurações por Poder, religiões e as listas de talentos de escolha (Sagaz, Gatuno, Lutador).

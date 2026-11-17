@@ -1,5 +1,6 @@
 import pdfplumber, re, json, sys
-F="/mnt/user-data/uploads/SDL___-___Basico-Edicao-Revisada-v1_02.pdf"
+import os
+F=os.environ.get("SDL_PDF","/mnt/user-data/uploads/SDL___-___Basico-Edicao-Revisada-v1_02.pdf")
 def cols(pg):
     # split page into 2 columns around the middle, reading order
     W=pg.width; return [(0,W/2),(W/2,W)]

@@ -1,5 +1,6 @@
 import pdfplumber,re,json,collections,sys,unicodedata
-F="/mnt/user-data/uploads/SDL___-___Basico-Edicao-Revisada-v1_02.pdf"
+import os
+F=os.environ.get("SDL_PDF","/mnt/user-data/uploads/SDL___-___Basico-Edicao-Revisada-v1_02.pdf")
 def norm(w): return re.sub(r"[^\w]","",unicodedata.normalize("NFC",w.lower()))
 def words_page(pg):
     ws=[w for w in pg.extract_words() if 40<w['top']<745 and "Licenciado" not in w['text']]
