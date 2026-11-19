@@ -25,7 +25,12 @@ def tokens(pages):
 SPECIAL={"Atributos","Características","Idiomas e Profissões"}
 def parse(pages,tier):
     paths={};lvl=None;pending=None;lastpath=None
-    for pn,k,t in tokens(pages):
+    toks=list(tokens(pages))
+    for ix,(pn,k,t) in enumerate(toks):
+        prox=toks[ix+1][2] if ix+1<len(toks) and toks[ix+1][1]=='T' else ""
+        if k=='B' and lvl is not None and lvl["talentos"] and (t[:1].islower() or prox[:1] in "(,.;)" or prox[:1].islower()) and t not in SPECIAL and not re.match(r"^d\d",t) and t!="Imune":
+            lvl["talentos"][-1]["texto"]+=" "+t+((" "+prox) if prox else ""); toks[ix+1]=(toks[ix+1][0],'X',prox) if prox else toks[ix+1]; continue
+        if k=='X': continue
         if k=='H':
             m=re.match(r"^(.*?)\s*(Especialista|Mestre)?\s*Nível\s*(\d+)$",t)
             if m:
@@ -53,7 +58,7 @@ def parse(pages,tier):
             pending=None
         elif k=='T' and lvl is None and lastpath and not pending:
             p=paths.setdefault(lastpath,{"nome":lastpath,"tier":tier,"niveis":{}})
-            if not t.startswith("d6"): p["descricao"]=(p.get("descricao","")+" "+t).strip() if len(t)>25 or p.get("descricao") else p.get("descricao","")
+            if not t.startswith("d6") and not re.match(r"^\d\s",t): p["descricao"]=(p.get("descricao","")+" "+t).strip() if len(t)>25 or p.get("descricao") else p.get("descricao","")
         elif k=='T' and lvl is not None and not pending and lvl["talentos"]:
             lvl["talentos"][-1]["texto"]+=" "+t
     return paths

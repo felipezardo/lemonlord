@@ -123,7 +123,7 @@ window.SDL = window.SDL || {};
     },
     excluir(id) { this.gravarTodas(this.lista().filter((f) => f.id !== id)); },
     nova() {
-      return { id: S.uid(), v: 1, criado: Date.now(), atualizado: Date.now(), nome: "", descricao: "", retrato: "", nivel: 1, anc: "", ancEsc: {}, ajuste: { mais: "", menos: "" },
+      return { id: S.uid(), v: 1, criado: Date.now(), atualizado: Date.now(), nome: "", descricao: "", retrato: "", nivel: 1, anc: "", sobre: "", sobreRolagem: {}, recursos: {}, ancEsc: {}, ajuste: { mais: "", menos: "" },
         trilhas: { novato: "", especialista: "", mestre: "" }, picks: {}, escolhas: {}, profissoes: [], talentosExtra: [], armas: [], armadura: "", escudo: "",
         equip: [], dinheiro: { co: 0, xp: 0, cc: 0 }, magias: [], tradicoes: [], talEsc: {}, efAtivos: {}, bonusAtivo: {}, religiao: "", conj: {}, notasTal: {}, dano: 0, insanidade: 0, corrupcao: 0, aflicoes: [], bonus: {}, notas: "", usados: {} };
     },
@@ -142,6 +142,7 @@ window.SDL = window.SDL || {};
   /* ---------- Cálculo automático da ficha ---------- */
   S.calcular = function (c) {
     const anc = S.byId(S.ancestralidades, c.anc);
+    const sobre = c.sobre ? S.byId(S.ancestralidades, c.sobre) : null;
     const nivel = +c.nivel || 0;
     const TE = { "Talento Sagaz": ["sagaz", 1], "Talentos Gatunos": ["gatuno", 2], "Talento Gatuno": ["gatuno", 1], "Talento de Lutador": ["lutador", 1] };
     let poderExtra = 0, sagazMagia = 0; const grants = [];
@@ -162,13 +163,16 @@ window.SDL = window.SDL || {};
       }
     }
     if (anc && nivel >= 4) {
-      const n4 = anc.nivel4; const optou = c.escolhas["anc:4"] || "talento";
-      ben.push({ chave: "anc:4", fonte: `${anc.nome} — nível 4`, esc: 0, car: n4.car, tal: optou === "talento" ? [n4.talento] : [], ancEscolha: n4.escolha });
+      const n4 = sobre ? sobre.nivel4 : anc.nivel4; const opcoes = sobre ? (sobre.nivel4.opcoes || ["talento", "feitico"]) : ["talento", "feitico"];
+      let optou = c.escolhas["anc:4"] || "talento"; if (!opcoes.includes(optou)) optou = opcoes[0];
+      const tal4 = optou === "talento" ? [n4.talento] : optou === "base" ? [anc.nivel4.talento] : [];
+      ben.push({ chave: "anc:4", fonte: `${sobre ? sobre.nome : anc.nome} — nível 4`, esc: 0, car: n4.car, tal: tal4, ancEscolha: n4.escolha, opcoes, opcao: optou, nomeTalento: n4.talento.n, nomeBase: anc.nivel4.talento.n });
     }
     r.ben = ben;
     // atributos
     const base = anc ? { ...anc.atr } : { forca: 10, agilidade: 10, intelecto: 10, vontade: 10 };
     if (anc && anc.escolhaAtributo && c.ancEsc.atributo) base[c.ancEsc.atributo] += 1;
+    if (sobre) Object.entries(sobre.atrDelta || {}).forEach(([k, v]) => { if (base[k] != null) base[k] += v; });
     if (c.ajuste.mais && c.ajuste.menos && c.ajuste.mais !== c.ajuste.menos) { base[c.ajuste.mais] += 1; base[c.ajuste.menos] -= 1; }
     for (const b of ben) {
       const p = (c.picks[b.chave] || []).slice(0, b.esc);
@@ -200,7 +204,7 @@ window.SDL = window.SDL || {};
       });
       if (b.mag) grants.push({ ...b.mag, fonte: b.fonte });
       if (b.feit) r.feitAuto.push(b.feit);
-      if (b.chave === "anc:4" && (c.escolhas["anc:4"] || "talento") === "feitico") grants.push({ esc: 1, solo: true, fonte: b.fonte });
+      if (b.chave === "anc:4" && b.opcao === "feitico") grants.push({ esc: 1, solo: true, fonte: b.fonte });
     }
     if (anc && anc.escolhaAtributo && !c.ancEsc.atributo) r.pend.push({ chave: "anc:attr", falta: 1, fonte: anc.nome + " (+1 em um atributo)" });
     const BK = { defesa: "defesa", "percepção": "percepcao", velocidade: "velocidade", vida: "vida", poder: "poder" };
@@ -209,12 +213,15 @@ window.SDL = window.SDL || {};
       if (t.bonus.length && (c.bonusAtivo || {})[t.n]) t.bonus.forEach((b2) => (r.car[b2.k] += b2.v));
     });
     for (const [k] of S.ATR) { const v = base[k] + (c.bonus[k] || 0); r.atrs[k] = { v, m: v - 10 }; }
-    if (anc) anc.talentos.forEach((t) => r.tal.unshift({ ...t, fonte: anc.nome }));
+    if (sobre) sobre.talentos.slice().reverse().forEach((t) => r.tal.unshift({ ...t, fonte: sobre.nome }));
+    if (anc) anc.talentos.slice().reverse().forEach((t) => r.tal.unshift({ ...t, fonte: anc.nome }));
     (c.talentosExtra || []).forEach((t) => r.tal.push({ n: t.n, t: t.t, fonte: "Personalizado", custom: true }));
     // características
+    if (sobre) Object.entries(sobre.carDelta || {}).forEach(([k, v]) => { r.car[k] = (r.car[k] || 0) + v; });
     const A = r.atrs, K = r.car, B = c.bonus;
     r.vida = A.forca.v + (anc ? anc.vidaBonus : 0) + K.vida + (B.vida || 0);
     r.cura = Math.floor(r.vida / 4) + K.cura + (B.cura || 0);
+    if (sobre && sobre.curaFixa != null) r.cura = sobre.curaFixa;
     r.percepcao = A.intelecto.v + (anc ? anc.percepcao : 0) + K.percepcao + (B.percepcao || 0);
     const arm = S.byId(S.armaduras, c.armadura);
     let defBase = anc && anc.defesaFixa ? anc.defesaFixa : A.agilidade.v;
@@ -253,7 +260,10 @@ window.SDL = window.SDL || {};
     r.feitAuto.forEach((id) => { const f2 = S.feiticosTrilha.find((x) => x.id === id); if (f2 && !r.feiticos.some((x) => x.id === id)) r.feiticos.push({ ...f2, uid: "auto-" + id, auto: true }); });
     r.casts = (grau) => (grau <= r.poder ? (S.conjuracoes[Math.min(r.poder, 10)] || [])[grau] || 0 : 0);
     r.atrTrad = (t) => { const i = S.tradicoesInfo.find((x) => x.nome === t); return i ? i.atr : "intelecto"; };
+    r.atrDe = (a) => (a === "ambos" ? (A.vontade.m > A.intelecto.m ? "vontade" : "intelecto") : a);
     r.efAtivos = c.efAtivos || {};
+    r.recursos = [].concat((anc && anc.recursos) || [], (sobre && sobre.recursos) || []).map((x) => { let max = 0; try { const ex = String(x.max).replace(/nivel/g, nivel).replace(/poder/g, r.poder); if (/^[\d+\-*() .]+$/.test(ex)) max = Function('"use strict";return (' + ex + ")")(); } catch (e) {} return { id: x.id, nome: x.nome, max: Math.max(0, Math.floor(max)), inicio: x.inicio || 0 }; });
+    r.sobre = sobre;
     r.reqArma = (a) => { const b = (a && a.id && S.armas.find((x) => x.id === a.id)) || a; if (!b || !b.reqN) return true; return b.reqAtr === "ambos" ? Math.max(A.forca.v, A.agilidade.v) >= b.reqN : A.forca.v >= b.reqN; };
     r.mod = (k) => (k === "percepcao" ? r.percepcao - 10 : A[k] ? A[k].m : 0);
     // ---- avisos e notas (nenhuma regra bloqueia o jogador; o app apenas sinaliza) ----
@@ -274,6 +284,8 @@ window.SDL = window.SDL || {};
     if (nivel >= 7 && !c.trilhas.mestre) A2("nota", "Nível 7 ou superior sem trilha de Mestre (ou especialista secundária) escolhida.");
     if (nivel >= 1 && !c.trilhas.novato) A2("nota", "Sem trilha de Novato escolhida.");
     if (!c.anc) A2("nota", "Ancestralidade não escolhida.");
+    if (sobre && anc && sobre.base && !sobre.base.includes(anc.id)) A2("alerta", `${sobre.nome} é uma sobreposição para ${sobre.base.map((id) => (S.byId(S.ancestralidades, id) || { nome: id }).nome).join(", ")}; a ancestralidade-base atual (${anc.nome}) não é uma delas.`);
+    for (const tier of ["novato", "especialista", "mestre"]) { const t = S.byId(S.trilhas, c.trilhas[tier]); if (t && t.requer) { const ok = [anc && anc.nome, sobre && sobre.nome].filter(Boolean).some((n) => n.toLowerCase() === String(t.requer).toLowerCase()); if (!ok) A2("alerta", `${t.nome} exige: ${t.requer}. O personagem não atende a esse requisito.`); } }
     r.avisos = av;
     return r;
   };

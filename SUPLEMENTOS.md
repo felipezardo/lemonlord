@@ -41,6 +41,17 @@ Este documento é o contrato de trabalho para adicionar qualquer suplemento (anc
 | Item | `{nome,preco,disp,cat,desc?}` | descrições verbatim |
 | Talento de escolha | `talentosEscolha.<tipo>[{n,t}]` | e registrar o tipo em `TE` (core.js) com o nº de escolhas |
 
+### 3.1 Extensões do esquema (criadas a partir de Tumbas da Desolação)
+| Recurso | Como usar |
+|---|---|
+| **Sobreposição de ancestralidade** (ex.: Regresso, Vampiro) | `tipo:"sobreposicao"`, `base:[ids]`, `atrDelta{}`, `carDelta{}` (somas fixas), `dados{insanidade:"1d3",corrupcao:"1d3"}` (rolados ao escolher), `talentos[]`, `intro`, `nivel4{car,escolha,opcoes:["feitico","talento","base"],talento}` (`base` = traço de especialista da outra ancestralidade). Aparece em “Sobreposições” na janela de Ancestralidade. |
+| Cura fixa | `curaFixa:0` na ancestralidade/sobreposição (só quando o texto diz que a taxa de cura é fixa; o gerador confere a frase). |
+| **Recursos** | `recursos:[{id,nome,max:"1+nivel",inicio}]` (expressão com `nivel`/`poder`) → contador na ficha. |
+| Requisito de trilha | `requer:"Vampiro"` (extraído de “você precisa ser um …”). Gera aviso, não bloqueia. |
+| Tradição menor / atributo duplo | `{nome,atr:"ambos",menor:true,grauMax:3,nota:<texto verbatim>}`; com `ambos` o site usa o melhor modificador entre Intelecto e Vontade. |
+| Lore | `lore:[{t,x}]` com seções descritivas/regras da ancestralidade (texto verbatim, exceto tabelas aleatórias). |
+| Item sem preço (relíquias) | `{nome,preco:"—",disp:"Relíquia",cat:"Relíquia",desc}` |
+
 ## 4. Regras de automação (o que codificar e como)
 **Sempre codificar (automático):** atributos (`esc`), características numéricas (`car`: vida, defesa, percepcao, velocidade, poder, cura, corrupcao, insanidade, tamanho), talentos listados, idiomas/profissões (texto), concessões de magia (`mag`), feitiços de trilha (`feit`), requisitos de armadura/arma, Defesa de armadura.
 
@@ -69,7 +80,18 @@ Este documento é o contrato de trabalho para adicionar qualquer suplemento (anc
 - [ ] README/relatório com contagens e pendências.
 - [ ] Gerar novo `sdl-ficha.zip` e incrementar a versão no arquivo do suplemento.
 
+## 6.1 Ferramentas de extração para suplementos
+- `tools/vocab_make.py <pdf>` — acrescenta o vocabulário do suplemento ao `vocab.json` (rode antes de extrair).
+- `tools/sup_lib.py` — `trilhas(páginas)`, `feiticos(páginas)` (aceita os dois estilos de cabeçalho), `pares`, `delta`, `cardelta`, `js_suplemento`.
+- `tools/sup_<id>.py` — script do suplemento (modelo: `sup_tumbas.py`); escreve `js/data/suplementos/<id>.js`.
+- `tools/audit_sup.py <js> <ini-fim>…` — lista trechos do PDF que não estão no arquivo gerado (cada um deve ser justificado: título, tabela aleatória, aventura/criatura, ou corrigido).
+- `relatorios/<id>.md` — relatório do suplemento (cobertura, contagens, não incluído, pendências).
+
 ## 7. Armadilhas já encontradas (não repetir)
+- Negrito no meio de frase (`…o talento **Beber Sangue** (veja a seguir)`) vira falso talento: tratar como texto contínuo (`fundir_inline`).
+- Feitiço de trilha dentro do texto de um nível (`ASSOLAR … Requisitos/Área/Duração`) não pode virar talentos; extrair à parte em `feiticosTrilha`.
+- Descrições de trilha podem receber a tabela “Desenvolvimento da História” (linhas que começam com número): filtrar.
+- Dois estilos de cabeçalho de feitiço (um token único ou nome + linha “ATAQUE DE X n”): conferir contagem por página.
 - Intervalo de páginas incompleto (p. 80) → trilhas ausentes.
 - Colunas/linhas misturadas quando se ordena por `round(top/3)`; usar agrupamento por tolerância.
 - Remover todos os hífens de quebra apaga hifens legítimos (`ouvi-lo`, `mortas-vivas`).

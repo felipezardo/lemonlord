@@ -288,3 +288,10 @@ button.card-op:hover,.card-op:hover{transform:translateY(-2px);box-shadow:0 8px 
 .btn-info:hover::before,.btn-info.aberto::before{background:var(--verm)}.btn-info:hover,.btn-info.aberto{color:#f6ecd9}.btn-info:active{transform:scale(.9)}
 @media (max-width:560px){.cards.uniforme{grid-template-columns:repeat(2,1fr);gap:.55rem}.card-uni{min-height:150px;max-height:150px;padding:.6rem}.card-uni .teaser{-webkit-line-clamp:2}}
 .detalhe-int{display:flex;flex-direction:column;gap:.7rem}
+.sec-sobre{margin-top:1.4rem}.recurso{display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem}.rec-n{font:400 .85rem var(--cap);letter-spacing:.12em;text-transform:uppercase;color:var(--verm)}.rec-v{min-width:3.4em;text-align:center;font-weight:700}
+.recurso .btn-icone{width:26px;height:26px}
+/* cartões uniformes: altura natural com resumo limitado a 3 linhas (sem cortar linhas ao meio) */
+.card-uni{min-height:170px;max-height:none;overflow:visible}
+.card-uni .teaser{flex:none}
+@media (max-width:560px){.card-uni{min-height:160px;max-height:none}}
+.nota-trad{margin:.3rem 0}.nota-trad summary{cursor:pointer;font:400 .78rem var(--cap);letter-spacing:.12em;text-transform:uppercase;color:var(--verm)}.nota-trad p{margin:.3rem 0;font-size:.85rem;line-height:1.3}

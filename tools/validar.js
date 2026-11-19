@@ -23,17 +23,21 @@ const texto = (t, onde) => {
 };
 // ancestralidades
 unicos(S.ancestralidades, "ancestralidades");
-S.ancestralidades.forEach((a) => { const o = `ancestralidade ${a.id}`;
-  if (!ID.test(a.id)) E(`${o}: id inválido`); ["nome", "desc", "idiomas"].forEach((k) => texto(a[k], `${o}.${k}`));
-  ATR.forEach((k) => { if (!Number.isInteger(a.atr && a.atr[k])) E(`${o}: atr.${k} ausente`); });
+S.ancestralidades.forEach((a) => { const o = `ancestralidade ${a.id}`; const so = a.tipo === "sobreposicao";
+  if (!ID.test(a.id)) E(`${o}: id inválido`); ["nome", "desc"].concat(so ? [] : ["idiomas"]).forEach((k) => texto(a[k], `${o}.${k}`));
+  if (so) { (a.base || []).forEach((b) => { if (!S.ancestralidades.some((x) => x.id === b)) E(`${o}: base "${b}" inexistente`); }); if (!(a.base || []).length) E(`${o}: sobreposição sem base[]`); Object.keys(a.atrDelta || {}).forEach((k) => { if (!ATR.includes(k)) E(`${o}: atrDelta.${k}`); }); Object.entries(a.dados || {}).forEach(([k, e]) => { if (!S.dados.expr(e)) E(`${o}: dados.${k} "${e}" inválido`); }); }
+  else { ATR.forEach((k) => { if (!Number.isInteger(a.atr && a.atr[k])) E(`${o}: atr.${k} ausente`); });
   ["percepcao", "vidaBonus", "velocidade", "corrupcao", "insanidade"].forEach((k) => { if (!Number.isInteger(a[k])) E(`${o}: ${k} deve ser inteiro`); });
-  if (!Array.isArray(a.tamanho) || !a.tamanho.length) E(`${o}: tamanho[]`);
+  if (!Array.isArray(a.tamanho) || !a.tamanho.length) E(`${o}: tamanho[]`); }
+  (a.recursos || []).forEach((r) => { if (!r.id || !r.nome || !/^[\dnivelpoder+\-*() .]+$/.test(String(r.max))) E(`${o}: recurso inválido ${r.id}`); });
+  (a.lore || []).forEach((l) => texto(l.x, `${o} lore ${l.t}`));
   (a.talentos || []).forEach((t) => { texto(t.n, `${o} talento.n`); texto(t.t, `${o} talento ${t.n}`); if (t.escolha && !(t.escolha.opcoes || []).length) E(`${o} ${t.n}: escolha sem opções`); });
-  const n4 = a.nivel4 || {}; if (!n4.car || !n4.talento) E(`${o}: nivel4 incompleto`); else { texto(n4.escolha, `${o} nivel4.escolha`); texto(n4.talento.t, `${o} nivel4 ${n4.talento.n}`); } });
+  const n4 = a.nivel4 || {}; if (!n4.car || !n4.talento) E(`${o}: nivel4 incompleto`); else { if (!(so && (n4.opcoes || []).length === 1)) texto(n4.escolha, `${o} nivel4.escolha`); texto(n4.talento.t, `${o} nivel4 ${n4.talento.n}`); } });
 // trilhas
 unicos(S.trilhas, "trilhas");
 const NIV = { novato: [1, 2, 5, 8], especialista: [3, 6, 9], mestre: [7, 10] }, nomesTrad = S.tradicoesInfo.map((t) => t.nome);
 S.trilhas.forEach((t) => { const o = `trilha ${t.id}`;
+  if ((t.nome || "").length > 60) E(`${o}: nome longo demais`);
   if (!ID.test(t.id)) E(`${o}: id inválido`); if (!NIV[t.tier]) E(`${o}: tier inválido`); texto(t.nome, `${o}.nome`); if (!t.desc) A(`${o}: sem descrição`);
   const ks = Object.keys(t.niv || {}).map(Number).sort((a, b) => a - b); if (!ks.length) E(`${o}: sem níveis`);
   if (NIV[t.tier] && ks.join() !== NIV[t.tier].join()) A(`${o}: níveis ${ks.join(",")} diferem do padrão ${NIV[t.tier].join(",")}`);
@@ -41,15 +45,15 @@ S.trilhas.forEach((t) => { const o = `trilha ${t.id}`;
     if (l.n !== k) E(`${p}: campo n difere da chave`); if (![0, 1, 2, 3].includes(l.esc)) E(`${p}: esc inválido`);
     Object.entries(l.car || {}).forEach(([c, v]) => { if (!CAR.includes(c) || !Number.isInteger(v)) E(`${p}: característica inválida ${c}`); });
     if (!(l.tal || []).length && !Object.keys(l.car || {}).length) A(`${p}: sem talentos nem características`);
-    (l.tal || []).forEach((x) => { texto(x.n, `${p} talento.n`); texto(x.t, `${p} ${x.n}`); });
+    (l.tal || []).forEach((x) => { if (/^(Alvos?|Área|Duração|Permanência|Requisitos?|Especial|Efeito|Gatilho|Sacrifício|Concentração|Desencadeada)$/.test(x.n)) E(`${p}: talento "${x.n}" parece rótulo de feitiço`); if (/^(Capítulo|Cap\.)\s*\d+$/i.test(x.n)) E(`${p}: talento "${x.n}" parece referência de página`); texto(x.n, `${p} talento.n`); texto(x.t, `${p} ${x.n}`); });
     if (l.mag) { const m = l.mag; ["obrig", "esc"].forEach((q) => { if (!Number.isInteger(m[q])) E(`${p}: mag.${q}`); }); (m.restr || []).forEach((r) => { if (!nomesTrad.includes(r)) E(`${p}: mag.restr refere tradição inexistente "${r}"`); }); }
     if (l.feit && !S.feiticosTrilha.some((x) => x.id === l.feit)) E(`${p}: feit "${l.feit}" não existe em feiticosTrilha`);
     if (!l.mag && !l.feit && (l.tal || []).some((x) => x.n === "Magia")) A(`${p}: talento "Magia" sem campo mag (concessão não automatizada)`); }); });
 // magia
-unicos(S.tradicoesInfo, "tradicoesInfo", (x) => x.nome); S.tradicoesInfo.forEach((t) => { if (!["intelecto", "vontade"].includes(t.atr)) E(`tradição ${t.nome}: atr inválido`); });
+unicos(S.tradicoesInfo, "tradicoesInfo", (x) => x.nome); S.tradicoesInfo.forEach((t) => { if (!["intelecto", "vontade", "ambos"].includes(t.atr)) E(`tradição ${t.nome}: atr inválido`); });
 unicos(S.feiticos, "feiticos"); S.feiticos.forEach((f) => { const o = `feitiço ${f.id}`; if (!nomesTrad.includes(f.trad)) E(`${o}: tradição inexistente "${f.trad}"`); if (!["Ataque", "Utilitário"].includes(f.tipo)) E(`${o}: tipo inválido`); if (!(f.grau >= 0 && f.grau <= 10)) E(`${o}: grau`); texto(f.texto, o); });
 nomesTrad.forEach((t) => { const gs = new Set(S.feiticos.filter((f) => f.trad === t).map((f) => f.grau)); const mx = Math.max(...gs); const falta = [...Array(mx + 1).keys()].filter((g) => !gs.has(g)); if (falta.length) A(`tradição ${t}: lacuna de graus (faltam ${falta.join(", ")}; o livro básico traz graus 0 a ${mx})`); });
-unicos(S.feiticosTrilha, "feiticosTrilha"); S.feiticosTrilha.forEach((f) => { if (!["intelecto", "vontade"].includes(f.atr)) E(`feitiço de trilha ${f.id}: atr`); texto(f.texto, `feitiço de trilha ${f.id}`); });
+unicos(S.feiticosTrilha, "feiticosTrilha"); S.feiticosTrilha.forEach((f) => { if (!["intelecto", "vontade", "ambos"].includes(f.atr)) E(`feitiço de trilha ${f.id}: atr`); texto(f.texto, `feitiço de trilha ${f.id}`); });
 S.religioes.forEach((r) => r[1].forEach((t) => { if (!nomesTrad.includes(t)) E(`religião ${r[0]}: tradição inexistente "${t}"`); }));
 // equipamento
 unicos(S.armas, "armas"); S.armas.forEach((a) => { ["nome", "dano", "maos", "preco", "disp", "cat"].forEach((k) => { if (a[k] == null || a[k] === "") E(`arma ${a.id}: falta ${k}`); }); if (a.dano !== "—" && !S.dados.expr(String(a.dano).replace(/\s/g, ""))) E(`arma ${a.id}: dano "${a.dano}" não é uma expressão de dados`); if (typeof a.reqN !== "number") A(`arma ${a.id}: sem reqN`); });

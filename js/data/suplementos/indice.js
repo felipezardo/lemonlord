@@ -3,5 +3,5 @@
    Procedimento completo e checklist: SUPLEMENTOS.md. Validação: node tools/validar.js */
 window.SDL = window.SDL || {};
 SDL.suplementosIndice = [
-  // "exemplo-suplemento.js",
+  "tumbas-da-desolacao.js",
 ];
